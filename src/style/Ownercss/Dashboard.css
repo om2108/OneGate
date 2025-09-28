@@ -1,0 +1,27 @@
+.dashboard-main-with-rightbar {
+  display: flex;
+  gap: 20px;
+}
+
+.dashboard-left {
+  flex: 3;
+}
+
+.dashboard-main-with-rightbar > .rightbar {
+  flex: 1;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-main-with-rightbar {
+    flex-direction: column;
+  }
+
+  .dashboard-left {
+    width: 100%;
+  }
+
+  .dashboard-main-with-rightbar > .rightbar {
+    width: 100%;
+    margin-top: 20px;
+  }
+}
