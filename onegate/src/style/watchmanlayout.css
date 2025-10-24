@@ -1,0 +1,33 @@
+
+.layout-container {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  min-height: 100vh;
+  background-color: #f8fafc; 
+}
+
+.layout-content {
+  flex: 1; 
+  margin-left: 220px; 
+  margin-top: 72px;   
+  padding: 20px;
+  
+  height: calc(100vh - 72px); 
+  overflow-y: auto;          
+
+  background-color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .layout-content {
+    margin-left: 0; 
+    margin-top: 60px; 
+    height: calc(100vh - 60px);   
+    padding: 15px;
+  }
+}
