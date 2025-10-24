@@ -1,0 +1,103 @@
+/* Sidebar container */
+.sidebar-container {
+    margin-left: 10px;
+  position: fixed;
+  left: 0;
+  top: 68px; /* below header */
+  width: 220px;
+  height: 85vh;
+  background-color: #ffffff;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  transition: transform 0.3s ease;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Sidebar Logo */
+
+
+/* Nav items */
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #4b5563;
+  font-weight: 500;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.sidebar-item:hover {
+  background-color: #f3f4f6;
+}
+
+.sidebar-item.active {
+  background-color: #e0f2fe;
+  color: #0284c7;
+}
+
+.sidebar-icon {
+  width: 20px;
+  height: 20px;
+  color: inherit; /* same as text */
+}
+
+/* Mobile: Sidebar becomes the horizontal top navigation bar */
+@media (max-width: 768px) {
+  /* Transform sidebar into a fixed top bar */
+  .sidebar-container {
+    margin-left: 0; /* Remove desktop left margin */
+    position: fixed;
+    top: 0; /* Shift to the top (where header was) */
+    left: 0;
+    width: 100%; /* Full width */
+    height: auto; /* Height driven by content */
+    padding: 10px 10px; /* Reduced padding for compactness */
+    border-right: none;
+    border-bottom: 1px solid #e5e7eb; /* Add a separation line */
+    
+    /* Change flex direction to horizontal */
+    flex-direction: row; 
+    justify-content: flex-start; 
+    
+    transform: none; 
+    z-index: 1000; 
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1); 
+  }
+
+  /* Change navigation list from column to row */
+  .sidebar-nav {
+    flex-direction: row;
+    justify-content: space-between; /* Spread items evenly */
+    align-items: center;
+    width: 100%;
+    gap: 5px; 
+  }
+  
+  /* Make each item flexible and compact */
+  .sidebar-item {
+    flex: 1; /* Allow all tabs to grow equally */
+    display: flex;
+    flex-direction: column; /* Stack icon and text vertically */
+    align-items: center;
+    gap: 2px; /* Small gap between icon and text */
+    padding: 5px 2px; 
+    font-size: 0.7rem; /* Smaller font size for mobile tabs */
+    white-space: nowrap; /* Prevent text wrapping for cleaner look */
+  }
+
+  .sidebar-icon {
+    width: 18px; /* Slightly smaller icon */
+    height: 18px;
+  }
+}

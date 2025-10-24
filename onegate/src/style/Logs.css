@@ -1,0 +1,193 @@
+
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f7f9; 
+    color: #333;
+}
+
+.property-hub-logs-layout {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-width: 85vw;
+}
+
+.main-content-area {
+    display: flex;
+    flex: 1;
+}
+.logs-panel-content {
+    flex-grow: 1;
+    padding: 30px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.logs-panel-content h1 {
+    font-size: 28px;
+    font-weight: 600;
+    color: #343a40;
+    margin-bottom: 30px;
+}
+
+
+.log-controls-card,
+.log-entries-card {
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    padding: 25px;
+    margin-bottom: 30px;
+    border: 1px solid #e9ecef;
+}
+
+.card-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-top: 0;
+    margin-bottom: 5px;
+    color: #343a40;
+}
+
+.card-subtitle {
+    font-size: 14px;
+    color: #6c757d;
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+
+.controls-group {
+    display: flex;
+    gap: 20px;
+    align-items: flex-end; 
+    flex-wrap: wrap;
+}
+
+.control-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.control-item label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #6c757d;
+    margin-bottom: 5px;
+}
+
+.control-item input[type="date"],
+.control-item select {
+    padding: 8px 10px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+    min-width: 150px;
+    outline: none;
+    color: #495057;
+    background-color: #ffffff;
+}
+
+.control-buttons {
+    margin-left: auto; 
+    display: flex;
+    gap: 10px;
+}
+
+.export-button,
+.download-button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.export-button {
+    background-color: #f8f9fa;
+    color: #343a40;
+    border: 1px solid #ced4da;
+}
+
+.export-button:hover {
+    background-color: #e9ecef;
+}
+
+.download-button {
+    background-color: #007bff; 
+    color: white;
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+}
+
+.download-button:hover {
+    background-color: #0056b3;
+}
+
+
+.log-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.log-table thead tr {
+    border-bottom: 2px solid #e9ecef;
+}
+
+.log-table th {
+    text-align: left;
+    padding: 12px 15px;
+    color: #6c757d;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.log-table tbody tr {
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.log-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.log-table td {
+    padding: 12px 15px;
+    font-size: 14px;
+    color: #495057;
+}
+
+.log-table td strong {
+    font-weight: 600;
+    color: #343a40;
+}
+
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px; /* Pill shape */
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    min-width: 70px;
+}
+
+.status-verified {
+    background-color: #e6ffed; 
+    color: #1a9d4a; 
+}
+
+.status-checked-in {
+    background-color: #e0f2ff; 
+    color: #007bff; 
+}
+
+.status-checked-out {
+    background-color: #fdf2e9; 
+    color: #dc6a00; 
+}
