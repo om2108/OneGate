@@ -3,7 +3,7 @@ import React, { useState, useEffect, useContext, useRef } from "react";
 import { addProperty } from "../../../../api/property";
 import { getAllSocieties, createSociety } from "../../../../api/society";
 import { AuthContext } from "../../../../context/AuthContext";
-import { uploadToCloudinary } from "../../../../api/upload";
+import useCloudinaryUpload from "../../../../hooks/useUploadImage"; // ⬅️ use same hook as ProfileModal
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function AddPropertyModal({ onClose, onSuccess }) {
@@ -22,11 +22,12 @@ export default function AddPropertyModal({ onClose, onSuccess }) {
 
   const [societies, setSocieties] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [previewFile, setPreviewFile] = useState(null);
   const [addingSociety, setAddingSociety] = useState(false);
   const [newSociety, setNewSociety] = useState({ name: "", address: "" });
+
+  // 🔗 cloudinary upload hook (same as profile)
+  const { uploadImage, uploading, progress: uploadProgress } = useCloudinaryUpload();
 
   // load societies
   useEffect(() => {
@@ -64,24 +65,38 @@ export default function AddPropertyModal({ onClose, onSuccess }) {
     };
   }, []);
 
-  // upload file
+  // upload file with size & type validation
   const handleFileSelect = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const file = e.target.files?.[0];
+  if (!file) return;
 
-    setPreviewFile(URL.createObjectURL(file));
-    setUploading(true);
-    try {
-      const url = await uploadToCloudinary(file, setUploadProgress);
-      setForm((p) => ({ ...p, image: url }));
-    } catch (err) {
-      console.error("Upload failed:", err);
-      alert("Image upload failed.");
-    } finally {
-      setUploading(false);
-      setUploadProgress(0);
-    }
-  };
+  // ✅ 1 MB limit
+  const maxSize = 1 * 1024 * 1024; // 1MB
+  if (file.size > maxSize) {
+    alert("Please select an image smaller than 1MB");
+    if (fileInputRef.current) fileInputRef.current.value = null;
+    return;
+  }
+
+  // ✅ ensure it's actually an image
+  if (!file.type.startsWith("image/")) {
+    alert("Please select a valid image file");
+    if (fileInputRef.current) fileInputRef.current.value = null;
+    return;
+  }
+
+  setPreviewFile(URL.createObjectURL(file));
+
+  const url = await uploadImage(file);
+  if (url) {
+    setForm((p) => ({ ...p, image: url }));
+  } else {
+    alert("Image upload failed.");
+    setPreviewFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = null;
+  }
+};
+
 
   const handleRemoveImage = () => {
     setForm((p) => ({ ...p, image: "" }));
@@ -204,7 +219,6 @@ export default function AddPropertyModal({ onClose, onSuccess }) {
             className="grid grid-cols-1 md:grid-cols-2 gap-4"
             initial="hidden"
             animate="visible"
-            variants={{}}
           >
             {/* name */}
             <motion.div variants={formGroup} custom={1}>
@@ -299,7 +313,10 @@ export default function AddPropertyModal({ onClose, onSuccess }) {
                           placeholder="Society Address (optional)"
                           value={newSociety.address}
                           onChange={(e) =>
-                            setNewSociety({ ...newSociety, address: e.target.value })
+                            setNewSociety({
+                              ...newSociety,
+                              address: e.target.value,
+                            })
                           }
                           className="border rounded-md px-3 py-2"
                         />
@@ -342,7 +359,9 @@ export default function AddPropertyModal({ onClose, onSuccess }) {
                     : "Enter property location"
                 }
                 className={`w-full border rounded-md px-3 py-2 ${
-                  form.type === "Apartment" ? "bg-gray-100 text-gray-700" : "bg-white text-black"
+                  form.type === "Apartment"
+                    ? "bg-gray-100 text-gray-700"
+                    : "bg-white text-black"
                 }`}
               />
             </motion.div>
@@ -379,8 +398,16 @@ export default function AddPropertyModal({ onClose, onSuccess }) {
           </motion.div>
 
           {/* image upload */}
-          <motion.div className="mt-4" variants={formGroup} initial="hidden" animate="visible" custom={7}>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Property Image</label>
+          <motion.div
+            className="mt-4"
+            variants={formGroup}
+            initial="hidden"
+            animate="visible"
+            custom={7}
+          >
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Property Image
+            </label>
             <div className="flex items-start gap-4">
               <div className="w-56 h-40 bg-gray-100 border rounded-lg overflow-hidden flex items-center justify-center">
                 <AnimatePresence>
@@ -442,13 +469,21 @@ export default function AddPropertyModal({ onClose, onSuccess }) {
                     Remove
                   </motion.button>
                 )}
-                {uploading && <div className="text-sm text-gray-600">Uploading... {uploadProgress}%</div>}
+                {uploading && (
+                  <div className="text-sm text-gray-600">
+                    Uploading... {uploadProgress}%
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>
 
           {/* actions */}
-          <motion.div className="mt-6 flex justify-end gap-3" variants={formGroup} custom={8}>
+          <motion.div
+            className="mt-6 flex justify-end gap-3"
+            variants={formGroup}
+            custom={8}
+          >
             <motion.button
               onClick={onClose}
               whileTap={{ scale: 0.96 }}

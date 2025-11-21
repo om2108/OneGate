@@ -1,4 +1,6 @@
-import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
+// src/components/layout/Header.jsx
+import React, { useContext, useEffect, useRef, useState } from "react";
+
 import {
   Bars3Icon,
   MagnifyingGlassIcon,
@@ -7,231 +9,406 @@ import {
   UserCircleIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
+
 import { useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import { getProfile } from "../../api/profile";
+import { getNotifications, markNotificationRead } from "../../api/notification";
+
 import logo from "../../assets/logo.svg";
 import { motion } from "framer-motion";
 
-export default function Header({ setSidebarOpen, setDrawerOpen }) {
-  const { user } = useContext(AuthContext);
+export default function Header({ setSidebarOpen, onOpenProfileModal }) {
+  const { user, logout } = useContext(AuthContext);
+
   const [profile, setProfile] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
+
   const [menuOpen, setMenuOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const [imgError, setImgError] = useState(false);
+
   const avatarRef = useRef(null);
+  const notifRef = useRef(null);
+
+  const [notifications, setNotifications] = useState([]);
+
+  // MOBILE SEARCH
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchText, setSearchText] = useState("");
 
   const navigate = useNavigate();
   const location = useLocation();
-  const params = new URLSearchParams(location.search);
-  const initialQ = params.get("search") || "";
 
-  // local state for search boxes
-  const [q, setQ] = useState(initialQ);
-  const [qMobile, setQMobile] = useState(initialQ);
-
+  /** -----------------------------------------------
+   * LOAD PROFILE
+   * --------------------------------------------- */
   useEffect(() => {
-    const current = new URLSearchParams(location.search).get("search") || "";
-    setQ(current);
-    setQMobile(current);
-  }, [location.search]);
-
-  useEffect(() => {
-    if (!user?.id) return;
+    if (!user) return;
     let mounted = true;
+
     (async () => {
-      setLoadingProfile(true);
       try {
-        const data = await getProfile(user.id);
+        setLoadingProfile(true);
+        const data = await getProfile();
         if (mounted) setProfile(data);
       } catch (e) {
-        console.error("❌ Failed to load profile:", e);
+        console.error("Profile load failed:", e);
       } finally {
         if (mounted) setLoadingProfile(false);
       }
     })();
-    return () => { mounted = false; };
-  }, [user?.id]);
+
+    return () => (mounted = false);
+  }, [user]);
+
+  const resolveUserId = () =>
+    profile?.id ||
+    profile?._id ||
+    profile?.userId ||
+    user?.id ||
+    user?._id ||
+    user?.userId ||
+    null;
+
+  /** -----------------------------------------------
+   * LOAD NOTIFICATIONS
+   * --------------------------------------------- */
+  const fetchNotifications = async () => {
+    const id = resolveUserId();
+    if (!id) return;
+
+    try {
+      const data = await getNotifications(id);
+      setNotifications(data || []);
+    } catch (e) {
+      console.error("Notification load error:", e);
+    }
+  };
 
   useEffect(() => {
+    if (!user) return setNotifications([]);
+    fetchNotifications();
+  }, [user]);
+
+  /** -----------------------------------------------
+   * CLOSE ON OUTSIDE CLICK
+   * --------------------------------------------- */
+  useEffect(() => {
     const onClick = (e) => {
-      if (!avatarRef.current) return;
-      if (!avatarRef.current.contains(e.target)) setMenuOpen(false);
+      if (
+        avatarRef.current &&
+        !avatarRef.current.contains(e.target) &&
+        notifRef.current &&
+        !notifRef.current.contains(e.target)
+      ) {
+        setMenuOpen(false);
+        setNotifOpen(false);
+      }
     };
-    if (menuOpen) document.addEventListener("mousedown", onClick);
+
+    document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
-  }, [menuOpen]);
+  }, []);
 
-  const displayName = useMemo(
-    () => profile?.fullName || user?.name || user?.email || "User",
-    [profile?.fullName, user?.name, user?.email]
-  );
-  const displayRole = useMemo(
-    () => (profile?.role ? String(profile.role).toLowerCase() : ""),
-    [profile?.role]
-  );
-
-  const initial =
-    profile?.fullName?.[0] || user?.name?.[0] || user?.email?.[0] || "U";
-  const showImage = !!profile?.image && !imgError;
-
+  /** -----------------------------------------------
+   * SEARCH (desktop + mobile)
+   * --------------------------------------------- */
   const submitSearch = (term) => {
-    const termTrim = term.trim();
-    const inDashboard =
-      location.pathname.startsWith("/dashboard/owner") ||
-      location.pathname.startsWith("/dashboard/secretary") ||
-      location.pathname.startsWith("/dashboard/watchman") ||
-      location.pathname.startsWith("/dashboard/member") ||
-      location.pathname.startsWith("/dashboard/user");
+    const q = term.trim();
+    const params = new URLSearchParams(location.search);
 
-    const base = inDashboard ? location.pathname : "/dashboard/user";
-    const next = new URLSearchParams(location.search);
-    if (termTrim) next.set("search", termTrim);
-    else next.delete("search");
-    navigate(`${base}?${next.toString()}`, { replace: false });
+    q ? params.set("search", q) : params.delete("search");
+
+    navigate(`${location.pathname}?${params.toString()}`);
   };
 
-  const onSubmitDesktop = (e) => {
+  const handleMobileSearchSubmit = (e) => {
     e.preventDefault();
-    submitSearch(q);
+    submitSearch(searchText);
+    setSearchOpen(false);
   };
-  const onSubmitMobile = (e) => {
-    e.preventDefault();
-    submitSearch(qMobile);
-  };
-  const clearDesktop = () => {
-    setQ("");
-    submitSearch("");
-  };
+
+  /** -----------------------------------------------
+   * COMMON INFO
+   * --------------------------------------------- */
+  const name = profile?.fullName || user?.name || user?.email;
+  const initial = String(name?.[0] || "U").toUpperCase();
+  const role = (profile?.role || user?.role || "").toLowerCase();
+  const unreadCount = notifications.length;
+
+  const formatDateTime = (dt) => (dt ? new Date(dt).toLocaleString() : "");
 
   return (
-    <motion.header
-      className="sticky top-0 z-50 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60"
-      initial={{ opacity: 0, y: -6 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.22 }}
-    >
-      <div className="h-0.5 bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-500" />
-      <div className="px-3 sm:px-6">
-        <div className="flex h-14 sm:h-16 items-center justify-between gap-3 border-b border-gray-200">
-          {/* Left: Burger + Logo */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            <button
-              className="lg:hidden p-2 rounded-md hover:bg-gray-100 transition"
-              onClick={() => setSidebarOpen((prev) => !prev)}
-              aria-label="Toggle sidebar"
-            >
-              <Bars3Icon className="h-6 w-6 text-gray-700" />
-            </button>
-            <img src={logo} alt="Logo" className="h-7 sm:h-9 object-contain" />
-          </div>
+    <>
+      {/* HEADER */}
+      <motion.header
+        className="sticky top-0 z-50 bg-white/80 backdrop-blur"
+        initial={{ opacity: 0, y: -6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.22 }}
+      >
+        <div className="h-0.5 bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-500" />
 
-          {/* Center: Search (desktop) */}
-          <div className="hidden sm:flex flex-1 justify-center max-w-xl w-full">
-            <form onSubmit={onSubmitDesktop} className="relative w-full">
-              <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
-                type="search"
-                placeholder="Search residents, properties, notices..."
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                className="w-full pl-10 pr-10 py-2 rounded-full border border-gray-300 bg-gray-50 text-sm text-gray-800
-                  focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none transition"
-              />
-              {q && (
-                <button
-                  type="button"
-                  onClick={clearDesktop}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-gray-100"
-                  aria-label="Clear"
-                >
-                  <XMarkIcon className="h-5 w-5 text-gray-500" />
-                </button>
-              )}
-            </form>
-          </div>
-
-          {/* Right: Actions + Profile */}
-          <div className="flex items-center gap-1 sm:gap-2">
-            <button className="sm:hidden p-2 rounded-md hover:bg-gray-100" aria-label="Search">
-              <MagnifyingGlassIcon className="h-6 w-6 text-gray-600" />
-            </button>
-
-            <motion.button
-              className="relative p-2 rounded-md hover:bg-gray-100"
-              aria-label="Notifications"
-              whileTap={{ scale: 0.96 }}
-            >
-              <BellIcon className="h-6 w-6 text-gray-600" />
-              <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white" />
-            </motion.button>
-
-            {/* Profile */}
-            <div ref={avatarRef} className="relative">
-              <motion.button
-                onClick={() => setMenuOpen((v) => !v)}
-                className="flex items-center gap-2 rounded-full pl-1 pr-2 py-1 hover:bg-gray-100 transition"
-                aria-haspopup="menu"
-                aria-expanded={menuOpen}
-                onMouseDown={(e) => e.preventDefault()}
-                onClickCapture={() => setDrawerOpen?.(true)}
-                whileTap={{ scale: 0.98 }}
+        <div className="px-3 sm:px-6 border-b border-gray-200">
+          <div className="flex h-14 sm:h-16 items-center justify-between">
+            {/* LEFT */}
+            <div className="flex items-center gap-2">
+              <button
+                className="lg:hidden p-2 rounded-md hover:bg-gray-100"
+                onClick={() => setSidebarOpen((v) => !v)}
               >
-                {loadingProfile ? (
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gray-200 animate-pulse" />
-                ) : showImage ? (
-                  <img
-                    src={profile.image}
-                    alt="Profile"
-                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover ring-2 ring-white shadow-sm"
-                    onError={() => setImgError(true)}
-                  />
-                ) : (
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 grid place-items-center rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 text-white ring-2 ring-white shadow-sm">
-                    {initial ? (
-                      <span className="font-semibold">{String(initial).toUpperCase()}</span>
+                <Bars3Icon className="h-6 w-6 text-gray-700" />
+              </button>
+              <img src={logo} alt="logo" className="h-7 sm:h-9" />
+            </div>
+
+            {/* CENTER (desktop search) */}
+            <div className="hidden sm:flex flex-1 justify-center max-w-lg">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  submitSearch(e.target.search.value);
+                }}
+                className="relative w-full"
+              >
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
+
+                <input
+                  name="search"
+                  placeholder="Search..."
+                  className="w-full pl-10 pr-10 py-2 rounded-full bg-gray-50 border text-sm 
+                             focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                />
+              </form>
+            </div>
+
+            {/* RIGHT */}
+            <div className="flex items-center gap-1 sm:gap-2">
+              {/* Mobile Search */}
+              <button
+                className="sm:hidden p-2 rounded-md hover:bg-gray-100"
+                onClick={() => setSearchOpen(true)}
+              >
+                <MagnifyingGlassIcon className="h-6 w-6" />
+              </button>
+
+              {/* Notifications */}
+              <div ref={notifRef} className="relative">
+                <button
+                  className="p-2 rounded-md hover:bg-gray-100 relative"
+                  onClick={() => {
+                    setNotifOpen((prev) => {
+                      if (!prev) setMenuOpen(false);
+                      return !prev;
+                    });
+                    fetchNotifications();
+                  }}
+                >
+                  <BellIcon className="h-6 w-6 text-gray-600" />
+
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white rounded-full text-[10px] px-1 min-w-[18px] h-[18px] grid place-items-center ring-2 ring-white">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* NOTIFICATION PANEL */}
+                {notifOpen && (
+                  <div
+                    className={`
+                      absolute bg-white border rounded-xl shadow-lg z-50
+                      ${
+                        window.innerWidth < 640
+                          ? "left-1/2 -translate-x-[80%] top-[60px] w-[85vw]" // shifted slightly left
+                          : "right-0 mt-2 w-80"
+                      }
+                    `}
+                    style={{ maxHeight: "75vh", overflowY: "auto" }}
+                  >
+                    <div className="px-4 py-2 border-b bg-gray-50">
+                      <p className="text-sm font-semibold text-gray-800">
+                        Notifications
+                      </p>
+                    </div>
+
+                    {notifications.length === 0 ? (
+                      <p className="p-4 text-center text-sm text-gray-500">
+                        No new notifications
+                      </p>
                     ) : (
-                      <UserCircleIcon className="w-6 h-6" />
+                      notifications.map((n) => (
+                        <button
+                          key={n._id}
+                          className="w-full text-left px-4 py-2.5 border-b hover:bg-gray-50"
+                          onClick={() => {
+                            markNotificationRead(n._id);
+                            setNotifications((prev) =>
+                              prev.filter((x) => x._id !== n._id)
+                            );
+                          }}
+                        >
+                          <p className="text-gray-800">{n.message}</p>
+                          <p className="text-[11px] text-gray-400">
+                            {formatDateTime(n.createdAt)}
+                          </p>
+                        </button>
+                      ))
                     )}
                   </div>
                 )}
-                <div className="hidden md:flex flex-col items-start leading-tight max-w-[160px]">
-                  <span className="text-sm font-semibold text-gray-900 truncate">{displayName}</span>
-                  <span className="text-[11px] text-gray-500 capitalize truncate">{displayRole}</span>
-                </div>
-                <ChevronDownIcon className="hidden sm:block h-4 w-4 text-gray-500" />
-              </motion.button>
+              </div>
 
-              {menuOpen && (
-                <div role="menu" className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-                  <div className="px-4 py-3 border-b">
-                    <p className="text-sm font-medium text-gray-900 truncate">{displayName}</p>
-                    {displayRole && <p className="text-xs text-gray-500 capitalize truncate">{displayRole}</p>}
+              {/* PROFILE */}
+              <div ref={avatarRef} className="relative">
+                <button
+                  className="flex items-center gap-2 rounded-full px-2 py-1 hover:bg-gray-100"
+                  onClick={() => {
+                    setMenuOpen((prev) => {
+                      if (!prev) setNotifOpen(false);
+                      return !prev;
+                    });
+                  }}
+                >
+                  {/* Avatar */}
+                  {profile?.image && !imgError ? (
+                    <img
+                      src={profile.image}
+                      className="w-9 h-9 rounded-full object-cover ring-2 ring-white"
+                      onError={() => setImgError(true)}
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 text-white grid place-items-center ring-2 ring-white">
+                      <span>{initial}</span>
+                    </div>
+                  )}
+
+                  {/* Name + Role (desktop only) */}
+                  <div className="hidden md:flex flex-col items-start leading-tight">
+                    <span className="text-sm font-semibold">{name}</span>
+                    <span className="text-[11px] text-gray-500 capitalize">
+                      {role}
+                    </span>
                   </div>
-                  <button className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50" onClick={() => setDrawerOpen?.(true)}>View Profile</button>
-                  <button className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50" onClick={() => alert("Coming soon")}>Settings</button>
-                  <a href="/logout" className="block px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50">Logout</a>
-                </div>
-              )}
+
+                  <ChevronDownIcon className="hidden sm:block h-4 w-4 text-gray-400" />
+                </button>
+
+                {/* PROFILE PANEL */}
+                {menuOpen && (
+                  <div className="absolute right-0 mt-2 w-72 rounded-xl border bg-white shadow-lg z-50">
+                    <div className="flex items-center gap-3 px-4 py-3 border-b">
+                      {profile?.image && !imgError ? (
+                        <img
+                          src={profile.image}
+                          className="w-10 h-10 rounded-full object-cover ring-1 ring-gray-200"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 text-white grid place-items-center">
+                          {initial}
+                        </div>
+                      )}
+
+                      <div>
+                        <p className="text-sm font-medium">{name}</p>
+                        <p className="text-xs text-gray-500">{user?.email}</p>
+                      </div>
+                    </div>
+
+                    <button
+                      className="w-full px-4 py-2.5 text-left hover:bg-gray-50"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        onOpenProfileModal();
+                      }}
+                    >
+                      View / Edit Profile
+                    </button>
+
+                    <button
+                      className="w-full px-4 py-2.5 text-left hover:bg-gray-50"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        navigate("/help");
+                      }}
+                    >
+                      Help
+                    </button>
+
+                    <button
+                      className="w-full px-4 py-2.5 text-left hover:bg-gray-50"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        navigate("/contact");
+                      }}
+                    >
+                      Contact
+                    </button>
+
+                    <button
+                      className="w-full px-4 py-2.5 text-left text-rose-600 hover:bg-rose-50 border-t"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        logout();
+                      }}
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Mobile search bar */}
-        <div className="sm:hidden py-2">
-          <form onSubmit={onSubmitMobile} className="relative block" aria-label="Mobile search">
-            <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="search"
-              placeholder="Search…"
-              value={qMobile}
-              onChange={(e) => setQMobile(e.target.value)}
-              className="w-full pl-10 pr-3 py-2 rounded-xl border border-gray-300 bg-gray-50 text-sm text-gray-800
-                focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none transition"
+        {/* MOBILE SEARCH DRAWER */}
+        {searchOpen && (
+          <>
+            <div
+              className="fixed inset-0 bg-black/40 z-[190]"
+              onClick={() => setSearchOpen(false)}
             />
-          </form>
-        </div>
-      </div>
-    </motion.header>
+
+            <div
+              className="fixed top-0 left-0 right-0 bg-white z-[200] p-4 shadow-xl rounded-b-2xl"
+              style={{ animation: "drawerSlideDown 0.25s ease-out" }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-lg font-semibold">Search</h2>
+                <button
+                  className="p-2 rounded-full hover:bg-gray-100"
+                  onClick={() => setSearchOpen(false)}
+                >
+                  <XMarkIcon className="h-6 w-6 text-gray-700" />
+                </button>
+              </div>
+
+              <form onSubmit={handleMobileSearchSubmit}>
+                <div className="relative">
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
+
+                  <input
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    autoFocus
+                    placeholder="Search…"
+                    className="w-full pl-10 pr-3 py-3 rounded-xl border bg-gray-50 text-sm 
+                               focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="mt-4 bg-blue-600 text-white w-full py-3 rounded-xl text-sm font-medium"
+                >
+                  Search
+                </button>
+              </form>
+            </div>
+          </>
+        )}
+      </motion.header>
+    </>
   );
 }
