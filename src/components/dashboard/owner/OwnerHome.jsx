@@ -33,22 +33,49 @@ export default function OwnerHome() {
     new URLSearchParams(location.search).get("search")?.trim().toLowerCase() ||
     "";
 
-  const fetchProperties = useCallback(async () => {
+  // 🔹 Fetch with an option to show/hide big loading spinner
+  const fetchProperties = useCallback(async (showSpinner = true) => {
     try {
       setErr("");
-      setLoading(true);
+      if (showSpinner) setLoading(true);
       const data = await getAllProperties();
-      setProperties(Array.isArray(data) ? data : []);
+      const list = Array.isArray(data) ? data : [];
+      setProperties(list);
+
+      // cache in sessionStorage for fast revisit
+      try {
+        sessionStorage.setItem("owner_properties", JSON.stringify(list));
+      } catch (e) {
+        console.warn("Failed to cache owner properties:", e);
+      }
     } catch (e) {
       console.error("Failed to fetch properties:", e);
       setErr("Could not load properties. Please try again.");
     } finally {
-      setLoading(false);
+      if (showSpinner) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchProperties();
+    // 🔹 Try to load from cache first for instant UI when revisiting
+    let hasCache = false;
+    try {
+      const cached = sessionStorage.getItem("owner_properties");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          setProperties(parsed);
+          setLoading(false); // don't show skeleton if we have cached data
+          hasCache = true;
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to read owner_properties cache:", e);
+    }
+
+    // If we had cache → refresh in background (no skeleton)
+    // If no cache → show skeleton during first load
+    fetchProperties(!hasCache);
   }, [fetchProperties]);
 
   const filtered = useMemo(() => {
@@ -56,7 +83,7 @@ export default function OwnerHome() {
 
     if (searchTerm) {
       list = list.filter((p) => {
-        const hay = [
+        const haystack = [
           p.name,
           p.area,
           p.location,
@@ -67,7 +94,8 @@ export default function OwnerHome() {
           .filter(Boolean)
           .join(" ")
           .toLowerCase();
-        return hay.includes(searchTerm);
+
+        return haystack.includes(searchTerm);
       });
     }
 
@@ -81,22 +109,23 @@ export default function OwnerHome() {
       case "name":
         list.sort((a, b) => String(a.name || "").localeCompare(b.name || ""));
         break;
-      default: // "created" — keep API order or newest first if timestamps exist
-        list.sort((a, b) =>
-          new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+      default: // "created" — newest first if timestamps exist
+        list.sort(
+          (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
         );
     }
 
     return list;
   }, [properties, searchTerm, sortBy]);
 
-  // show only first 6 items on this view
   const VISIBLE_COUNT = 6;
   const visibleProperties = filtered.slice(0, VISIBLE_COUNT);
   const hasMore = filtered.length > VISIBLE_COUNT;
 
-  // Loading skeleton
-  if (loading) {
+  // 🔹 Only show big skeleton if we truly have no data yet (first ever load)
+  const showSkeleton = loading && properties.length === 0;
+
+  if (showSkeleton) {
     return (
       <div className="p-4 sm:p-6">
         <div className="max-w-7xl mx-auto">
@@ -134,16 +163,24 @@ export default function OwnerHome() {
       {/* Main column */}
       <div className="flex-1 flex flex-col gap-6">
         {/* Greeting can open add-property modal; refetch on add */}
-        <motion.div layout initial="hidden" animate="enter" variants={itemVariants}>
-          <Greeting onPropertyAdded={fetchProperties} />
+        <motion.div
+          layout
+          initial="hidden"
+          animate="enter"
+          variants={itemVariants}
+        >
+          <Greeting onPropertyAdded={() => fetchProperties(true)} />
         </motion.div>
 
         {/* Toolbar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h3 className="text-xl font-semibold text-gray-900">My Properties</h3>
+            <h3 className="text-xl font-semibold text-gray-900">
+              My Properties
+            </h3>
             <p className="text-sm text-gray-500">
-              Showing {Math.min(filtered.length, VISIBLE_COUNT)} of {filtered.length} result
+              Showing {Math.min(filtered.length, VISIBLE_COUNT)} of{" "}
+              {filtered.length} result
               {filtered.length === 1 ? "" : "s"}
               {searchTerm && (
                 <>
@@ -168,10 +205,14 @@ export default function OwnerHome() {
 
             {/* Animated Refresh Button */}
             <motion.button
-              onClick={fetchProperties}
+              onClick={() => fetchProperties(true)}
               className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-800 hover:bg-gray-50 text-sm"
               animate={loading ? { rotate: 360 } : { rotate: 0 }}
-              transition={loading ? { repeat: Infinity, duration: 1, ease: "linear" } : { duration: 0.25 }}
+              transition={
+                loading
+                  ? { repeat: Infinity, duration: 1, ease: "linear" }
+                  : { duration: 0.25 }
+              }
               aria-label="Refresh properties"
             >
               <ArrowPathIcon className="h-4 w-4" />
@@ -200,7 +241,9 @@ export default function OwnerHome() {
             animate={{ opacity: 1, y: 0 }}
             className="rounded-2xl border border-gray-200 bg-white p-8 text-center"
           >
-            <p className="text-gray-700 font-medium mb-1">No properties found</p>
+            <p className="text-gray-700 font-medium mb-1">
+              No properties found
+            </p>
             <p className="text-gray-500 text-sm">
               Try changing filters or add a new property from the greeting card.
             </p>
@@ -223,8 +266,10 @@ export default function OwnerHome() {
                     transition={{ duration: 0.18 }}
                     className="h-full"
                   >
-                    <PropertyCard property={property} onUpdate={fetchProperties} />
-                    {/* location + price block REMOVED */}
+                    <PropertyCard
+                      property={property}
+                      onUpdate={() => fetchProperties(false)}
+                    />
                   </motion.div>
                 ))}
               </motion.div>
@@ -246,15 +291,24 @@ export default function OwnerHome() {
         )}
 
         {/* Owner payments widget */}
-        <motion.div layout initial="hidden" animate="enter" variants={itemVariants}>
-          <Payments />
-        </motion.div>
+        <div className="bg-white rounded-2xl p-4 shadow">
+          <h3 className="text-base font-semibold mb-3">Payments</h3>
+
+          {/* ensure the container has an explicit height and doesn't collapse */}
+          <div className="w-full h-72 min-w-0">
+            <Payments />
+          </div>
+        </div>
       </div>
 
       {/* Right column */}
       <div className="w-full lg:w-80 flex-shrink-0">
         <div className="lg:sticky lg:top-20">
-          <motion.div layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+          <motion.div
+            layout
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
             <Rightbar />
           </motion.div>
         </div>

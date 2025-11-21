@@ -15,20 +15,25 @@ import {
 // links map (unchanged)
 const linksMap = {
   USER: [{ name: "Dashboard", path: "/dashboard/user", icon: HomeIcon }],
-  MEMBER: [
-    { name: "Dashboard", path: "/dashboard/member", icon: HomeIcon },
-    { name: "My Dues", path: "/dashboard/member/dues", icon: CreditCardIcon },
-    { name: "Residents", path: "/dashboard/member/residents", icon: UserGroupIcon },
-    { name: "Complaints", path: "/dashboard/member/complaints", icon: ClipboardDocumentListIcon },
-    { name: "Facilities", path: "/dashboard/member/facilities", icon: CalendarDaysIcon },
-    { name: "Bookings", path: "/dashboard/member/bookings", icon: ClipboardDocumentListIcon },
-  ],
+  // snippet from src/components/layout/Sidebar.jsx (replace MEMBER array)
+MEMBER: [
+  { name: "Dashboard", path: "/dashboard/member", icon: HomeIcon },
+  { name: "My Dues", path: "/dashboard/member/dues", icon: CreditCardIcon },
+  { name: "Residents", path: "/dashboard/member/residents", icon: UserGroupIcon },
+  { name: "Complaints", path: "/dashboard/member/complaints", icon: ClipboardDocumentListIcon },
+  { name: "Facilities", path: "/dashboard/member/facilities", icon: CalendarDaysIcon },
+  { name: "Bookings", path: "/dashboard/member/bookings", icon: ClipboardDocumentListIcon },
+  { name: "Explore Properties", path: "/dashboard/member/properties", icon: EyeIcon },
+],
+
   OWNER: [
-    { name: "Dashboard", path: "/dashboard/owner", icon: HomeIcon },
-    { name: "Properties", path: "/dashboard/owner/properties", icon: ClipboardDocumentListIcon },
-    { name: "Tenant Requests", path: "/dashboard/owner/tenants", icon: UserGroupIcon },
-    { name: "Agreements", path: "/dashboard/owner/agreements", icon: CreditCardIcon },
-  ],
+  { name: "Dashboard", path: "/dashboard/owner", icon: HomeIcon },
+  { name: "Properties", path: "/dashboard/owner/properties", icon: ClipboardDocumentListIcon },
+  { name: "Tenant Requests", path: "/dashboard/owner/tenants", icon: UserGroupIcon },
+  { name: "Agreements", path: "/dashboard/owner/agreements", icon: CreditCardIcon },
+  { name: "User Management", path: "/dashboard/owner/user-list", icon: UserGroupIcon },
+],
+
   SECRETARY: [
     { name: "Dashboard", path: "/dashboard/secretary", icon: HomeIcon },
     { name: "Notices", path: "/dashboard/secretary/notices", icon: ClipboardDocumentListIcon },

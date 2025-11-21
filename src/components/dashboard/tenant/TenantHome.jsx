@@ -1,4 +1,3 @@
-// src/components/dashboard/tenant/TenantHome.jsx
 import React, {
   useEffect,
   useMemo,
@@ -8,7 +7,7 @@ import React, {
 } from "react";
 import PropertyCard from "./PropertyCard";
 import PropertyFilters from "../owner/PropertyCompo/PropertyFilters";
-import { getAllProperties } from "../../../api/property";
+import { getAllProperties, getRecommendations, recordPropertyClick } from "../../../api/property";
 import { getAllSocieties } from "../../../api/society";
 import { requestAppointment } from "../../../api/appointment";
 import { AuthContext } from "../../../context/AuthContext";
@@ -45,22 +44,21 @@ export default function TenantHome() {
     maxPrice: "",
   });
 
+  // AI suggestion state
+  const [aiPick, setAiPick] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
+
+  // load properties + societies
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const [pRes, sRes] = await Promise.allSettled([
-          getAllProperties(),
-          getAllSocieties(),
-        ]);
+        const [pRes, sRes] = await Promise.allSettled([getAllProperties(), getAllSocieties()]);
         if (!mounted) return;
 
-        setProperties(
-          pRes.status === "fulfilled" && Array.isArray(pRes.value) ? pRes.value : []
-        );
-        setSocieties(
-          sRes.status === "fulfilled" && Array.isArray(sRes.value) ? sRes.value : []
-        );
+        setProperties(pRes.status === "fulfilled" && Array.isArray(pRes.value) ? pRes.value : []);
+        setSocieties(sRes.status === "fulfilled" && Array.isArray(sRes.value) ? sRes.value : []);
       } catch (e) {
         console.error("TenantHome load error:", e);
       } finally {
@@ -112,13 +110,65 @@ export default function TenantHome() {
     });
   }, [properties, filters]);
 
-  const aiPick = filtered[0];
+  // fetch recommendation on filter changes (debounced + cancel)
+  useEffect(() => {
+    let cancelled = false;
+    let timer = null;
 
-  const handleAction = useCallback((action, property) => {
-    setSelectedProperty(property);
-    setPopupMode(action);
-    setSuccessMessage("");
-  }, []);
+    const fetchRecommendation = async () => {
+      setAiLoading(true);
+      setAiError("");
+      try {
+        const body = { k: 1 };
+        if (filters.location) body.location = filters.location;
+        if (filters.minPrice) body.minPrice = Number(filters.minPrice);
+        if (filters.maxPrice) body.maxPrice = Number(filters.maxPrice);
+
+        // pass token only if available; api.js will fallback to its default header if set
+        const token = user?.token;
+        const data = await getRecommendations(body, token);
+        if (!cancelled) {
+          setAiPick(Array.isArray(data) && data.length > 0 ? data[0] : null);
+        }
+      } catch (err) {
+        console.debug("AI recommend error:", err);
+        if (!cancelled) {
+          setAiPick(null);
+          // if backend returns 401/403 for some reason, show small message
+          const errMsg = err.message || String(err);
+          setAiError(errMsg);
+        }
+      } finally {
+        if (!cancelled) setAiLoading(false);
+      }
+    };
+
+    timer = setTimeout(fetchRecommendation, 400);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [filters.location, filters.minPrice, filters.maxPrice, user?.token]);
+
+  const handleAction = useCallback(
+    async (action, property) => {
+      setSelectedProperty(property);
+      setPopupMode(action);
+      setSuccessMessage("");
+
+      // record a click/view for personalization (backend will update user vector)
+      try {
+        // pass token only if present; backend endpoint requires auth for saving clicks
+        if (user?.token) {
+          await recordPropertyClick(property.id || property._id, user?.token);
+        }
+      } catch (err) {
+        // non-blocking
+        console.debug("record click failed", err);
+      }
+    },
+    [user?.token]
+  );
 
   const closePopup = () => {
     setPopupMode("");
@@ -134,7 +184,6 @@ export default function TenantHome() {
 
       const payload = {
         propertyId: String(selectedProperty.id || selectedProperty._id),
-        userId: user?.id || null, // if backend infers from token, it's fine if null
         dateTime,
         location:
           reqLocation ||
@@ -202,7 +251,12 @@ export default function TenantHome() {
           <p className="text-blue-900/90 text-sm">
             Based on your current filters, we recommend:
           </p>
-          {aiPick ? (
+
+          {aiLoading ? (
+            <p className="mt-1 text-sm text-blue-900">Calculating recommendation…</p>
+          ) : aiError ? (
+            <p className="mt-1 text-sm text-red-700">Recommendation error: {aiError}</p>
+          ) : aiPick ? (
             <p className="mt-1 text-sm text-blue-900">
               🏠 <span className="font-medium">{aiPick.name}</span> — Best value
               in {aiPick.location}! ({inr.format(aiPick.price)})
@@ -231,7 +285,7 @@ export default function TenantHome() {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Modal (view / request) */}
       {popupMode && selectedProperty && (
         <div
           className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-3"

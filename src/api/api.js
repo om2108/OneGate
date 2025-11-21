@@ -6,7 +6,12 @@ const api = axios.create({
   withCredentials: false,
 });
 
-// ✅ Attach or remove token globally
+// initialize token from localStorage on module import to avoid race conditions
+const initialToken = localStorage.getItem("token");
+if (initialToken) {
+  api.defaults.headers.common["Authorization"] = `Bearer ${initialToken}`;
+}
+
 export const setAuthToken = (token) => {
   if (token) {
     api.defaults.headers.common["Authorization"] = `Bearer ${token}`;

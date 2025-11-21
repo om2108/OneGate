@@ -1,7 +1,8 @@
 // src/api/society.js
 import api from "./api";
 
-export const getAllSocieties = async () => (await api.get("/societies")).data;
+export const getAllSocieties = async () =>
+  (await api.get("/societies")).data;
 
 export const getSocietyById = async (id) =>
   (await api.get(`/societies/${id}`)).data;

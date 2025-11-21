@@ -3,7 +3,7 @@ import React, { useState, useEffect, useContext, useRef } from "react";
 import { updateProperty } from "../../../../api/property";
 import { getAllSocieties } from "../../../../api/society";
 import { AuthContext } from "../../../../context/AuthContext";
-import { uploadToCloudinary } from "../../../../api/upload";
+import useCloudinaryUpload from "../../../../hooks/useUploadImage"; // ⬅️ same hook
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function PropertyEditModal({ property, onClose, onSuccess }) {
@@ -22,9 +22,10 @@ export default function PropertyEditModal({ property, onClose, onSuccess }) {
 
   const [societies, setSocieties] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [previewFile, setPreviewFile] = useState(null);
+
+  // ⛓ cloudinary upload hook
+  const { uploadImage, uploading, progress: uploadProgress } = useCloudinaryUpload();
 
   // load societies
   useEffect(() => {
@@ -71,24 +72,38 @@ export default function PropertyEditModal({ property, onClose, onSuccess }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // handle file upload
+  // handle file upload with validation
   const handleFileSelect = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const file = e.target.files?.[0];
+  if (!file) return;
 
-    setPreviewFile(URL.createObjectURL(file));
-    setUploading(true);
-    try {
-      const url = await uploadToCloudinary(file, setUploadProgress);
-      setForm((p) => ({ ...p, image: url }));
-    } catch (err) {
-      console.error("Upload failed:", err);
-      alert("Image upload failed.");
-    } finally {
-      setUploading(false);
-      setUploadProgress(0);
-    }
-  };
+  // ✅ 1 MB limit
+  const maxSize = 1 * 1024 * 1024; // 1MB
+  if (file.size > maxSize) {
+    alert("Please select an image smaller than 1MB");
+    if (fileInputRef.current) fileInputRef.current.value = null;
+    return;
+  }
+
+  // ✅ ensure it's actually an image
+  if (!file.type.startsWith("image/")) {
+    alert("Please select a valid image file");
+    if (fileInputRef.current) fileInputRef.current.value = null;
+    return;
+  }
+
+  setPreviewFile(URL.createObjectURL(file));
+
+  const url = await uploadImage(file);
+  if (url) {
+    setForm((p) => ({ ...p, image: url }));
+  } else {
+    alert("Image upload failed.");
+    setPreviewFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = null;
+  }
+};
+
 
   const handleRemoveImage = () => {
     setForm((p) => ({ ...p, image: "" }));
@@ -180,7 +195,9 @@ export default function PropertyEditModal({ property, onClose, onSuccess }) {
             {/* Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {form.type === "Apartment" ? "Flat No / Apartment No" : "Property Name"}
+                {form.type === "Apartment"
+                  ? "Flat No / Apartment No"
+                  : "Property Name"}
               </label>
               <input
                 type="text"
@@ -197,7 +214,9 @@ export default function PropertyEditModal({ property, onClose, onSuccess }) {
 
             {/* Type */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Type
+              </label>
               <select
                 value={form.type}
                 onChange={(e) => setForm({ ...form, type: e.target.value })}
@@ -246,14 +265,18 @@ export default function PropertyEditModal({ property, onClose, onSuccess }) {
                     : "Enter property location"
                 }
                 className={`w-full border rounded-md px-3 py-2 ${
-                  form.type === "Apartment" ? "bg-gray-100 text-gray-700" : "bg-white text-black"
+                  form.type === "Apartment"
+                    ? "bg-gray-100 text-gray-700"
+                    : "bg-white text-black"
                 }`}
               />
             </div>
 
             {/* Price */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Price (₹)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Price (₹)
+              </label>
               <input
                 type="number"
                 value={form.price}
@@ -265,7 +288,9 @@ export default function PropertyEditModal({ property, onClose, onSuccess }) {
 
             {/* Status */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </label>
               <select
                 value={form.status}
                 onChange={(e) => setForm({ ...form, status: e.target.value })}
@@ -280,7 +305,9 @@ export default function PropertyEditModal({ property, onClose, onSuccess }) {
 
           {/* Image Upload */}
           <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Property Image</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Property Image
+            </label>
             <div className="flex items-start gap-4">
               <div className="w-56 h-40 bg-gray-100 border rounded-lg overflow-hidden flex items-center justify-center">
                 <AnimatePresence>
@@ -307,7 +334,11 @@ export default function PropertyEditModal({ property, onClose, onSuccess }) {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <motion.span initial={{ opacity: 0.6 }} animate={{ opacity: 1 }} className="text-gray-500 text-sm">
+                    <motion.span
+                      initial={{ opacity: 0.6 }}
+                      animate={{ opacity: 1 }}
+                      className="text-gray-500 text-sm"
+                    >
                       No image
                     </motion.span>
                   )}
@@ -338,7 +369,11 @@ export default function PropertyEditModal({ property, onClose, onSuccess }) {
                     Remove
                   </motion.button>
                 )}
-                {uploading && <div className="text-sm text-gray-600">Uploading... {uploadProgress}%</div>}
+                {uploading && (
+                  <div className="text-sm text-gray-600">
+                    Uploading... {uploadProgress}%
+                  </div>
+                )}
               </div>
             </div>
           </div>

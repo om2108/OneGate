@@ -1,6 +1,7 @@
 // src/components/profile/ProfileModal.jsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useContext } from "react";
 import { getProfile, updateProfile } from "../../api/profile";
+import { getUserById } from "../../api/user"; // ⬅️ NEW
 import useCloudinaryUpload from "../../hooks/useUploadImage";
 import {
   FaUser,
@@ -13,14 +14,7 @@ import {
   FaTimes,
 } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
-
-/**
- * Animated Profile Modal (clean)
- * - Backdrop fade + modal scale & translate
- * - Inline editable fields: Full Name, Phone, Address
- * - Avatar upload via useCloudinaryUpload hook
- * - Created/Updated rows removed (as requested)
- */
+import { AuthContext } from "../../context/AuthContext"; // ⬅️ NEW
 
 const backdropVariants = {
   hidden: { opacity: 0 },
@@ -33,18 +27,32 @@ const modalVariants = {
 };
 
 export default function ProfileModal({ isOpen, onClose }) {
+  const { user } = useContext(AuthContext); // ⬅️ to know current user id
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [profile, setProfile] = useState(null);
 
-  const [editing, setEditing] = useState({}); // which fields are being edited
-  const [draft, setDraft] = useState({}); // draft values while editing
-  const [savingField, setSavingField] = useState(""); // field currently saving
+  const [editing, setEditing] = useState({});
+  const [draft, setDraft] = useState({});
+  const [savingField, setSavingField] = useState("");
 
   const [preview, setPreview] = useState(null);
   const fileInputRef = useRef(null);
   const firstInputRef = useRef(null);
   const { uploadImage, uploading, progress } = useCloudinaryUpload();
+
+  const [userEmail, setUserEmail] = useState(""); // ⬅️ email from /users API
+
+  // 🔑 helper: always send full PROFILE data (no email)
+  const buildPayload = (overrides = {}) => {
+    const base = {
+      fullName: draft.fullName ?? profile?.fullName ?? "",
+      phone: draft.phone ?? profile?.phone ?? "",
+      address: draft.address ?? profile?.address ?? "",
+      image: profile?.image ?? "",
+    };
+    return { ...base, ...overrides };
+  };
 
   // Prevent background scroll when modal open
   useEffect(() => {
@@ -55,10 +63,9 @@ export default function ProfileModal({ isOpen, onClose }) {
         document.body.style.overflow = prev;
       };
     }
-    return;
   }, [isOpen]);
 
-  // Load profile when opening
+  // Load profile + user email when opening
   useEffect(() => {
     if (!isOpen) return;
 
@@ -67,19 +74,27 @@ export default function ProfileModal({ isOpen, onClose }) {
       try {
         setLoading(true);
         setErr("");
-        const data = await getProfile();
+
+        const [profileRes, userRes] = await Promise.all([
+          getProfile(),
+          user?.id || user?._id ? getUserById(user.id || user._id) : Promise.resolve(null),
+        ]);
+
         if (!mounted) return;
-        const safeData = data || {};
-        setProfile(safeData);
+
+        const safeProfile = profileRes || {};
+        setProfile(safeProfile);
         setDraft({
-          fullName: safeData?.fullName || "",
-          phone: safeData?.phone || "",
-          address: safeData?.address || "",
+          fullName: safeProfile?.fullName || "",
+          phone: safeProfile?.phone || "",
+          address: safeProfile?.address || "",
         });
+
+        setUserEmail(userRes?.email || user?.email || ""); // ⬅️ email from users API or context
         setEditing({});
         setPreview(null);
       } catch (e) {
-        console.error("Failed to load profile", e);
+        console.error("Failed to load profile or user", e);
         if (mounted) setErr("Failed to load profile.");
       } finally {
         if (mounted) setLoading(false);
@@ -89,9 +104,9 @@ export default function ProfileModal({ isOpen, onClose }) {
     return () => {
       mounted = false;
     };
-  }, [isOpen]);
+  }, [isOpen, user]);
 
-  // Focus first input when opening and when switching into edit mode for a field
+  // Focus first input when opening
   useEffect(() => {
     if (isOpen) {
       const t = setTimeout(() => {
@@ -113,7 +128,6 @@ export default function ProfileModal({ isOpen, onClose }) {
   const toggleEdit = (field, on = undefined) => {
     setEditing((prev) => ({ ...prev, [field]: on ?? !prev[field] }));
     if (on === false && profile) {
-      // revert draft to profile value when cancelling
       setDraft((p) => ({ ...p, [field]: profile[field] || "" }));
     }
     if (on === true) {
@@ -123,6 +137,7 @@ export default function ProfileModal({ isOpen, onClose }) {
     }
   };
 
+  // Update one field in UI, but send full profile object to backend (no email)
   const saveField = async (field) => {
     if (!profile) return;
     const newVal = draft[field] ?? "";
@@ -132,8 +147,11 @@ export default function ProfileModal({ isOpen, onClose }) {
     }
     try {
       setSavingField(field);
-      await updateProfile({ [field]: newVal }); // API: partial update
-      setProfile((p) => ({ ...(p || {}), [field]: newVal }));
+
+      const payload = buildPayload({ [field]: newVal });
+
+      await updateProfile(payload);
+      setProfile((p) => ({ ...(p || {}), ...payload }));
       toggleEdit(field, false);
     } catch (e) {
       console.error("Failed to save field", e);
@@ -143,24 +161,44 @@ export default function ProfileModal({ isOpen, onClose }) {
     }
   };
 
+  // Avatar upload – also only profile fields
   const onAvatarPick = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setPreview(URL.createObjectURL(file));
-    try {
-      const url = await uploadImage(file);
-      if (url) {
-        await updateProfile({ image: url });
-        setProfile((p) => ({ ...(p || {}), image: url }));
-      }
-    } catch (err) {
-      console.error("Upload failed", err);
-      alert("Failed to upload image.");
-      setPreview(null);
-    }
-  };
+  const file = e.target.files?.[0];
+  if (!file) return;
 
-  // small helper
+  // ✅ 1 MB limit
+  const maxSize = 1 * 1024 * 1024; // 1MB
+  if (file.size > maxSize) {
+    alert("Please choose an image smaller than 1MB");
+    if (fileInputRef.current) fileInputRef.current.value = null;
+    setPreview(null);
+    return;
+  }
+
+  // (optional but recommended) ensure it's an image
+  if (!file.type.startsWith("image/")) {
+    alert("Please select a valid image file");
+    if (fileInputRef.current) fileInputRef.current.value = null;
+    setPreview(null);
+    return;
+  }
+
+  setPreview(URL.createObjectURL(file));
+  try {
+    const url = await uploadImage(file);
+    if (url) {
+      const payload = buildPayload({ image: url });
+      await updateProfile(payload);
+      setProfile((p) => ({ ...(p || {}), ...payload }));
+    }
+  } catch (err) {
+    console.error("Upload failed", err);
+    alert("Failed to upload image.");
+    setPreview(null);
+  }
+};
+
+
   const safe = (v) => (v && String(v).trim() ? v : "—");
 
   if (!isOpen) return null;
@@ -176,14 +214,13 @@ export default function ProfileModal({ isOpen, onClose }) {
           variants={backdropVariants}
           transition={{ duration: 0.18 }}
         >
-          {/* clickable dark backdrop */}
+          {/* backdrop */}
           <div
             className="absolute inset-0 bg-black/50"
             aria-hidden="true"
             onClick={onClose}
           />
 
-          {/* Modal container */}
           <motion.div
             role="dialog"
             aria-modal="true"
@@ -303,10 +340,11 @@ export default function ProfileModal({ isOpen, onClose }) {
                     inputAsTextArea
                   />
 
+                  {/* Email is read-only, comes from users API */}
                   <StaticInfoRow
                     icon={<FaEnvelope className="text-gray-500" />}
                     label="Email"
-                    value={safe(profile?.email)}
+                    value={safe(userEmail)}
                   />
                 </>
               )}
@@ -318,7 +356,7 @@ export default function ProfileModal({ isOpen, onClose }) {
   );
 }
 
-/* ---------------- Subcomponents (unchanged layout) ---------------- */
+/* ---------------- Subcomponents ---------------- */
 
 function StaticInfoRow({ icon, label, value }) {
   const show = value && String(value).trim() ? value : "—";
@@ -373,7 +411,9 @@ function EditableInfoRow({
                 disabled={saving}
                 onClick={onSave}
                 className={`inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-md ${
-                  saving ? "bg-blue-300 text-white cursor-wait" : "bg-blue-600 text-white hover:bg-blue-700"
+                  saving
+                    ? "bg-blue-300 text-white cursor-wait"
+                    : "bg-blue-600 text-white hover:bg-blue-700"
                 }`}
               >
                 <FaCheck /> {saving ? "Saving..." : "Save"}

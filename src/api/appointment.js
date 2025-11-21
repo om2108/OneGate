@@ -1,36 +1,28 @@
 // src/api/appointment.js
 import api from "./api";
 
-export const requestAppointment = async (payload) => {
-  // payload: { propertyId, userId?, dateTime?, location? }
-  const res = await api.post("/appointments", payload);
-  return res.data;
+export const fetchRequests = async () =>
+  (await api.get("/appointments")).data;
+
+// ✅ FIXED: send as query params (matches @RequestParam in controller)
+export const approveRequest = async (id, payload = { accepted: true }) => {
+  const { accepted = true, dateTime, location } = payload || {};
+
+  return (
+    await api.put(`/appointments/${id}/respond`, null, {
+      params: {
+        accepted,
+        ...(dateTime ? { dateTime } : {}),
+        ...(location ? { location } : {}),
+      },
+    })
+  ).data;
 };
 
-// ✅ Fetch all tenant requests / appointments
-export const fetchRequests = async () => {
-  const res = await api.get("/appointments");
-  return res.data;
-};
+export const rejectRequest = async (id) =>
+  (await api.delete(`/appointments/${id}`)).data;
 
-// ✅ Approve request by ID
-export const approveRequest = async (id) => {
-  const res = await api.put(`/appointments/${id}/respond`, null, {
-    params: { accepted: true },
-  });
-  return res.data;
-};
+export const deleteAppointment = rejectRequest;
 
-// ✅ Reject request by ID
-export const rejectRequest = async (id) => {
-  const res = await api.put(`/appointments/${id}/respond`, null, {
-    params: { accepted: false },
-  });
-  return res.data;
-};
-
-// ✅ Delete appointment
-export const deleteAppointment = async (id) => {
-  const res = await api.delete(`/appointments/${id}`);
-  return res.data;
-};
+export const requestAppointment = async (payload) =>
+  (await api.post("/appointments", payload)).data;

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+// src/components/charts/PaymentsChart.jsx
+import React, { useEffect, useRef, useState } from "react";
 import {
   LineChart,
   Line,
@@ -9,82 +10,121 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-export default function PaymentsChart() {
-  const [paymentData, setPaymentData] = useState([]);
-  const [loading, setLoading] = useState(true);
+const mockData = [
+  { month: "Jan", amount: 4500 },
+  { month: "Feb", amount: 5200 },
+  { month: "Mar", amount: 4800 },
+  { month: "Apr", amount: 6100 },
+  { month: "May", amount: 5600 },
+  { month: "Jun", amount: 6300 },
+  { month: "Jul", amount: 5900 },
+  { month: "Aug", amount: 6800 },
+  { month: "Sep", amount: 7200 },
+  { month: "Oct", amount: 7500 },
+  { month: "Nov", amount: 7000 },
+  { month: "Dec", amount: 8000 },
+];
 
-  // 🧩 Mock JSON Data (you can replace this later with API data)
-  const mockData = [
-    { month: "Jan", amount: 4500 },
-    { month: "Feb", amount: 5200 },
-    { month: "Mar", amount: 4800 },
-    { month: "Apr", amount: 6100 },
-    { month: "May", amount: 5600 },
-    { month: "Jun", amount: 6300 },
-    { month: "Jul", amount: 5900 },
-    { month: "Aug", amount: 6800 },
-    { month: "Sep", amount: 7200 },
-    { month: "Oct", amount: 7500 },
-    { month: "Nov", amount: 7000 },
-    { month: "Dec", amount: 8000 },
-  ];
+export default function PaymentsChart() {
+  const containerRef = useRef(null);
+  const roRef = useRef(null);
+  const [ready, setReady] = useState(false);
+  const [data, setData] = useState([]);
 
   useEffect(() => {
-    setLoading(true);
-    setTimeout(() => {
-      setPaymentData(mockData);
-      setLoading(false);
-    }, 800); // Simulate delay
+    const t = setTimeout(() => setData(mockData), 200); // simulate load
+    return () => clearTimeout(t);
   }, []);
 
-  if (loading)
-    return (
-      <div className="bg-white rounded-2xl p-4 shadow text-center">
-        Loading chart...
-      </div>
-    );
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) {
+      const id = setTimeout(() => setReady(true), 300);
+      return () => clearTimeout(id);
+    }
 
-  if (!paymentData.length)
+    let retries = 0;
+    const maxRetries = 8;
+    const retryInterval = 150;
+
+    const measure = () => {
+      const rect = el.getBoundingClientRect();
+      const w = Math.round(el.clientWidth || rect.width || 0);
+      const h = Math.round(el.clientHeight || rect.height || 0);
+      console.debug("PaymentsChart measured:", { w, h, retries });
+      return { w, h };
+    };
+
+    const check = () => {
+      const { w, h } = measure();
+      if (w > 0 && h > 0) {
+        setReady(true);
+        return true;
+      }
+      return false;
+    };
+
+    if (typeof ResizeObserver !== "undefined") {
+      roRef.current = new ResizeObserver(() => {
+        if (check() && roRef.current) roRef.current.disconnect();
+      });
+      roRef.current.observe(el);
+      if (check()) {
+        if (roRef.current) roRef.current.disconnect();
+        return;
+      }
+    }
+
+    const id = setInterval(() => {
+      retries += 1;
+      if (check()) {
+        clearInterval(id);
+      } else if (retries >= maxRetries) {
+        console.warn("PaymentsChart: measurement retries exhausted — forcing ready");
+        setReady(true);
+        clearInterval(id);
+      }
+    }, retryInterval);
+
+    return () => {
+      if (roRef.current && typeof roRef.current.disconnect === "function")
+        roRef.current.disconnect();
+      clearInterval(id);
+    };
+  }, [containerRef]);
+
+  if (!data.length) {
     return (
-      <div className="bg-white rounded-2xl p-4 shadow text-center">
-        No payment data available.
+      <div ref={containerRef} className="w-full h-full flex items-center justify-center">
+        Loading chart data...
       </div>
     );
+  }
 
   return (
-    <div className="bg-white p-4 sm:p-6 rounded-2xl shadow w-full h-72 sm:h-80">
-      <h2 className="text-base sm:text-lg font-semibold mb-3 text-gray-800">
-        Monthly Payments Overview
-      </h2>
-
-      <ResponsiveContainer width="100%" height="90%">
-        <LineChart data={paymentData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-          <XAxis
-            dataKey="month"
-            stroke="#6b7280"
-            tick={{ fontSize: 12 }}
-            tickMargin={8}
-          />
-          <YAxis stroke="#6b7280" tick={{ fontSize: 12 }} />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: "#fff",
-              borderRadius: "0.5rem",
-              border: "1px solid #e5e7eb",
-              fontSize: "0.85rem",
-            }}
-          />
-          <Line
-            type="monotone"
-            dataKey="amount"
-            stroke="#3b82f6"
-            strokeWidth={3}
-            dot={{ r: 4, fill: "#3b82f6" }}
-            activeDot={{ r: 6 }}
-          />
-        </LineChart>
-      </ResponsiveContainer>
+    <div ref={containerRef} className="w-full h-full min-h-[220px]">
+      {ready ? (
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+            <YAxis tick={{ fontSize: 12 }} />
+            <Tooltip />
+            <Line
+              type="monotone"
+              dataKey="amount"
+              stroke="#3b82f6"
+              strokeWidth={3}
+              dot={{ r: 4 }}
+              activeDot={{ r: 6 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      ) : (
+        <div className="w-full h-full flex items-center justify-center text-gray-400">
+          Preparing chart…
+        </div>
+      )}
     </div>
   );
 }
