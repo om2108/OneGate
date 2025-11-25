@@ -18,6 +18,11 @@ const LoginForm = lazy(() => import("./components/auth/LoginForm"));
 const RegisterForm = lazy(() => import("./components/auth/RegisterForm"));
 const VerifyEmail = lazy(() => import("./components/auth/VerifyEmail"));
 const Onboarding = lazy(() => import("./components/auth/OnboardingPage"));
+const ForgotPassword = lazy(() => import("./components/auth/ForgotPassword"));
+const ResetPassword = lazy(() => import("./components/auth/ResetPassword"));
+
+// Landing / Welcome (Professional)
+const WelcomePage = lazy(() => import("./components/layout/WelcomePage"));
 
 // DASHBOARD LAYOUTS
 const UserLayout = lazy(() => import("./components/layout/UserLayout"));
@@ -64,15 +69,32 @@ const Unauthorized = lazy(() => import("./components/dashboard/Unauthorized"));
 const Help = lazy(() => import("./components/layout/Help"));
 const Contact = lazy(() => import("./components/layout/Contact"));
 
-// Page transitions
 function PageTransition({ children }) {
+  const prefersReducedMotion =
+    typeof window !== "undefined" &&
+    window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const duration = prefersReducedMotion ? 0 : 0.25;
+  const disableBodyScroll = !prefersReducedMotion;
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: 0.25 }}
-      style={{ height: "100%" }}
+      initial={prefersReducedMotion ? {} : { opacity: 0, y: 10 }}
+      animate={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
+      exit={prefersReducedMotion ? {} : { opacity: 0, y: -10 }}
+      transition={{ duration }}
+      className="app-min-h-screen"
+      style={{
+        minHeight: "100vh",
+        overflow: "hidden",
+      }}
+      onAnimationStart={() => {
+        if (disableBodyScroll) document.body.classList.add("body-no-scroll");
+      }}
+      onAnimationComplete={() => {
+        if (disableBodyScroll) document.body.classList.remove("body-no-scroll");
+      }}
     >
       {children}
     </motion.div>
@@ -81,13 +103,13 @@ function PageTransition({ children }) {
 
 function AnimatedRoutes() {
   const location = useLocation();
-  const authPaths = ["/login", "/register", "/verify", "/onboarding"];
-
+  // include forgot/reset routes as auth flow pages
+  const authPaths = ["/login", "/register", "/verify", "/onboarding", "/forgot-password", "/reset-password"];
   const isAuthPath = authPaths.includes(location.pathname);
 
   return (
     <>
-      {/* AUTH ROUTES */}
+      {/* AUTH ROUTES (animated) */}
       <AnimatePresence mode="wait" initial={false}>
         {isAuthPath && (
           <Routes location={location} key={location.pathname}>
@@ -95,16 +117,19 @@ function AnimatedRoutes() {
             <Route path="/register" element={<PageTransition><RegisterForm /></PageTransition>} />
             <Route path="/verify" element={<PageTransition><VerifyEmail /></PageTransition>} />
             <Route path="/onboarding" element={<PageTransition><Onboarding /></PageTransition>} />
-
+            <Route path="/forgot-password" element={<PageTransition><ForgotPassword /></PageTransition>} />
+            <Route path="/reset-password" element={<PageTransition><ResetPassword /></PageTransition>} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         )}
       </AnimatePresence>
 
-      {/* PROTECTED ROUTES */}
+      {/* PUBLIC + PROTECTED ROUTES */}
       {!isAuthPath && (
         <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          {/* Public landing / welcome page */}
+          <Route path="/" element={<WelcomePage />} />
+
           <Route path="/unauthorized" element={<Unauthorized />} />
 
           {/* HELP & CONTACT */}
@@ -148,7 +173,6 @@ function AnimatedRoutes() {
             <Route path="facilities" element={<FacilitiesBooking />} />
             <Route path="residents" element={<ResidentsList />} />
             <Route path="complaints" element={<ComplaintsList />} />
-            {/* NEW: explore properties for MEMBER */}
             <Route path="properties" element={<MemberProperties />} />
           </Route>
 
@@ -170,7 +194,8 @@ function AnimatedRoutes() {
             <Route index element={<TenantHome />} />
           </Route>
 
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          {/* catch-all: redirect to landing (public) */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       )}
     </>
