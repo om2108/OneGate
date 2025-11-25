@@ -221,7 +221,7 @@ export default function Header({ setSidebarOpen, onOpenProfileModal }) {
                       absolute bg-white border rounded-xl shadow-lg z-50
                       ${
                         window.innerWidth < 640
-                          ? "left-1/2 -translate-x-[80%] top-[60px] w-[85vw]" // shifted slightly left
+                          ? "left-1/2 -translate-x-[75%] top-[60px] w-[85vw]" // shifted slightly left
                           : "right-0 mt-2 w-80"
                       }
                     `}

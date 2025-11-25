@@ -1,3 +1,4 @@
+// src/components/auth/LoginForm.jsx (replace your existing LoginForm)
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { loginUser } from "../../api/auth";
@@ -10,6 +11,7 @@ export default function LoginForm() {
   const navigate = useNavigate();
 
   const [form, setForm] = useState({ email: "", password: "" });
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -22,21 +24,29 @@ export default function LoginForm() {
     setError("");
     setSubmitting(true);
     try {
-      const res = await loginUser(form);
+      const res = await loginUser({ ...form, rememberMe });
       localStorage.setItem("token", res.token);
       setAuthToken(res.token);
 
-      // Guard in case token is malformed
       const [, payloadB64] = res.token.split(".");
       const payload = payloadB64 ? JSON.parse(atob(payloadB64)) : {};
-      setUser({ email: payload.sub, role: payload.role });
+      setUser({ email: payload.sub, role: payload.role, token: res.token });
 
       switch (payload.role) {
-        case "OWNER": navigate("/dashboard/owner"); break;
-        case "SECRETARY": navigate("/dashboard/secretary"); break;
-        case "MEMBER": navigate("/dashboard/member"); break;
-        case "WATCHMAN": navigate("/dashboard/watchman"); break;
-        default: navigate("/dashboard/user");
+        case "OWNER":
+          navigate("/dashboard/owner");
+          break;
+        case "SECRETARY":
+          navigate("/dashboard/secretary");
+          break;
+        case "MEMBER":
+          navigate("/dashboard/member");
+          break;
+        case "WATCHMAN":
+          navigate("/dashboard/watchman");
+          break;
+        default:
+          navigate("/dashboard/user");
       }
     } catch (err) {
       setError(err?.response?.data?.error || "Login failed");
@@ -49,21 +59,18 @@ export default function LoginForm() {
 
   return (
     <div className="relative min-h-screen grid place-items-center">
-      {/* Background */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${bgImage})` }}
         aria-hidden="true"
       />
-      {/* Readability overlay */}
       <div className="absolute inset-0 bg-gradient-to-tr from-black/40 via-black/20 to-transparent" />
 
-      {/* Card */}
       <div className="relative w-full max-w-md">
         <div className="bg-white/85 backdrop-blur-md rounded-2xl shadow-2xl ring-1 ring-black/5 p-6 sm:p-8">
           <h1 className="text-3xl font-bold text-center text-gray-900">Login</h1>
           <p className="mt-1 text-center text-gray-600 text-sm">
-            Welcome back to <span className="font-semibold text-blue-600">OneGate</span> — your Society & Real Estate Management Portal
+            Welcome back to <span className="font-semibold text-blue-600">OneGate</span>
           </p>
 
           {error && (
@@ -73,7 +80,6 @@ export default function LoginForm() {
           )}
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            {/* Email */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Email
@@ -91,7 +97,6 @@ export default function LoginForm() {
               />
             </div>
 
-            {/* Password */}
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Password
@@ -118,10 +123,14 @@ export default function LoginForm() {
               </div>
             </div>
 
-            {/* Actions */}
             <div className="flex items-center justify-between text-sm">
               <label className="inline-flex items-center gap-2 text-gray-700">
-                <input type="checkbox" className="rounded border-gray-300" />
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                />
                 Remember me
               </label>
               <Link to="/forgot-password" className="text-blue-600 hover:underline">
@@ -129,7 +138,6 @@ export default function LoginForm() {
               </Link>
             </div>
 
-            {/* Submit */}
             <button
               type="submit"
               disabled={isDisabled}
@@ -139,14 +147,12 @@ export default function LoginForm() {
             </button>
           </form>
 
-          {/* Divider */}
           <div className="mt-6 flex items-center gap-3">
             <div className="h-px w-full bg-gray-200" />
             <span className="text-xs text-gray-500">or</span>
             <div className="h-px w-full bg-gray-200" />
           </div>
 
-          {/* Register */}
           <p className="mt-4 text-center text-gray-700">
             Don&apos;t have an account?{" "}
             <Link to="/register" className="font-semibold text-blue-600 hover:underline">

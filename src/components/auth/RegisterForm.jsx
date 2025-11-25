@@ -1,3 +1,4 @@
+// src/components/auth/RegisterForm.jsx
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { registerUser } from "../../api/auth";
@@ -18,10 +19,13 @@ export default function RegisterForm() {
     setMessage("");
     setSubmitting(true);
     try {
-      const res = await registerUser(form);
-      setMessage(res.message);
+      await registerUser(form);
+
+      // Save email so VerifyEmail can read it when query param is absent
       localStorage.setItem("email", form.email);
-      navigate("/verify");
+
+      // Navigate to verification with purpose=verify
+      navigate(`/verify?email=${encodeURIComponent(form.email)}&purpose=verify`);
     } catch (err) {
       setMessage(err.response?.data?.error || "Registration failed");
     } finally {
@@ -31,22 +35,18 @@ export default function RegisterForm() {
 
   return (
     <div className="relative min-h-screen grid place-items-center">
-      {/* Background image */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${bgImage})` }}
         aria-hidden="true"
       />
-
-      {/* Gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-tr from-black/40 via-black/25 to-transparent" />
 
-      {/* Registration card */}
       <div className="relative w-full max-w-md">
         <div className="bg-white/85 backdrop-blur-md rounded-2xl shadow-2xl ring-1 ring-black/5 p-6 sm:p-8">
           <h1 className="text-3xl font-bold text-center text-gray-900">Create Account</h1>
           <p className="mt-1 text-center text-gray-600 text-sm">
-            Join <span className="font-semibold text-blue-600">OneGate</span> — your Society & Real Estate Management Portal
+            Join <span className="font-semibold text-blue-600">OneGate</span> — your Society & Real Estate Portal
           </p>
 
           {message && (
@@ -62,54 +62,42 @@ export default function RegisterForm() {
           )}
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            {/* Full Name */}
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                Full Name
-              </label>
+              <label className="block text-sm font-medium text-gray-700">Full Name</label>
               <input
-                id="name"
                 name="name"
                 value={form.name}
                 onChange={handleChange}
                 placeholder="John Doe"
                 required
-                className="mt-1 w-full rounded-lg border border-gray-300 bg-white/90 px-4 py-2.5 text-gray-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-400"
+                className="mt-1 w-full rounded-lg border border-gray-300 bg-white/90 px-4 py-2.5 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400"
               />
             </div>
 
-            {/* Email */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email Address
-              </label>
+              <label className="block text-sm font-medium text-gray-700">Email Address</label>
               <input
-                id="email"
                 name="email"
                 type="email"
                 value={form.email}
                 onChange={handleChange}
                 placeholder="you@example.com"
                 required
-                className="mt-1 w-full rounded-lg border border-gray-300 bg-white/90 px-4 py-2.5 text-gray-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-400"
+                className="mt-1 w-full rounded-lg border border-gray-300 bg-white/90 px-4 py-2.5 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400"
               />
             </div>
 
-            {/* Password */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
+              <label className="block text-sm font-medium text-gray-700">Password</label>
               <div className="mt-1 relative">
                 <input
-                  id="password"
                   name="password"
                   type={showPassword ? "text" : "password"}
                   value={form.password}
                   onChange={handleChange}
                   placeholder="••••••••"
                   required
-                  className="w-full rounded-lg border border-gray-300 bg-white/90 px-4 py-2.5 pr-12 text-gray-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-400"
+                  className="w-full rounded-lg border border-gray-300 bg-white/90 px-4 py-2.5 pr-12 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400"
                 />
                 <button
                   type="button"
@@ -120,34 +108,27 @@ export default function RegisterForm() {
                   {showPassword ? "Hide" : "Show"}
                 </button>
               </div>
-              <p className="mt-1 text-xs text-gray-500">
-                Use at least 8 characters, including a number and a symbol.
-              </p>
+              <p className="mt-1 text-xs text-gray-500">Use at least 6 characters.</p>
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={submitting}
-              className="w-full rounded-lg bg-gradient-to-r from-blue-500 to-indigo-500 py-2.5 font-semibold text-white shadow-md transition hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full rounded-lg bg-gradient-to-r from-blue-500 to-indigo-500 py-2.5 font-semibold text-white shadow hover:brightness-110 disabled:opacity-60"
             >
               {submitting ? "Registering..." : "Register"}
             </button>
           </form>
 
-          {/* Divider */}
           <div className="mt-6 flex items-center gap-3">
             <div className="h-px w-full bg-gray-200" />
             <span className="text-xs text-gray-500">or</span>
             <div className="h-px w-full bg-gray-200" />
           </div>
 
-          {/* Login Link */}
           <p className="mt-4 text-center text-gray-700">
             Already have an account?{" "}
-            <Link to="/login" className="font-semibold text-blue-600 hover:underline">
-              Login
-            </Link>
+            <Link to="/login" className="font-semibold text-blue-600 hover:underline">Login</Link>
           </p>
         </div>
       </div>
