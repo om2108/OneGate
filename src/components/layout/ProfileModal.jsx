@@ -15,6 +15,10 @@ import {
 } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import { AuthContext } from "../../context/AuthContext"; // ⬅️ NEW
+import { validateAadhaar } from "../../utils/aadhaarValidator";
+
+import { extractTextFromImage } from "../../utils/ocr";
+
 
 const backdropVariants = {
   hidden: { opacity: 0 },
@@ -31,12 +35,22 @@ export default function ProfileModal({ isOpen, onClose }) {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [profile, setProfile] = useState(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const [editing, setEditing] = useState({});
   const [draft, setDraft] = useState({});
+  
   const [savingField, setSavingField] = useState("");
+  
 
   const [preview, setPreview] = useState(null);
+  const [uploadingFor, setUploadingFor] = useState("");
+  const [documents, setDocuments] = useState({
+    aadhaar: "",
+    pan: "",
+    passportPhoto: "",
+  });
+
   const fileInputRef = useRef(null);
   const firstInputRef = useRef(null);
   const { uploadImage, uploading, progress } = useCloudinaryUpload();
@@ -50,7 +64,11 @@ export default function ProfileModal({ isOpen, onClose }) {
       phone: draft.phone ?? profile?.phone ?? "",
       address: draft.address ?? profile?.address ?? "",
       image: profile?.image ?? "",
+      aadhaar: documents.aadhaar || profile?.aadhaar || "",
+      pan: documents.pan || profile?.pan || "",
+      passportPhoto: documents.passportPhoto || profile?.passportPhoto || "",
     };
+
     return { ...base, ...overrides };
   };
 
@@ -77,13 +95,21 @@ export default function ProfileModal({ isOpen, onClose }) {
 
         const [profileRes, userRes] = await Promise.all([
           getProfile(),
-          user?.id || user?._id ? getUserById(user.id || user._id) : Promise.resolve(null),
+          user?.id || user?._id
+            ? getUserById(user.id || user._id)
+            : Promise.resolve(null),
         ]);
 
         if (!mounted) return;
 
         const safeProfile = profileRes || {};
         setProfile(safeProfile);
+        setDocuments({
+          aadhaar: safeProfile?.aadhaar || "",
+          pan: safeProfile?.pan || "",
+          passportPhoto: safeProfile?.passportPhoto || "",
+        });
+
         setDraft({
           fullName: safeProfile?.fullName || "",
           phone: safeProfile?.phone || "",
@@ -140,11 +166,21 @@ export default function ProfileModal({ isOpen, onClose }) {
   // Update one field in UI, but send full profile object to backend (no email)
   const saveField = async (field) => {
     if (!profile) return;
+
     const newVal = draft[field] ?? "";
+
+    // VALIDATION HERE
+    const errorMessage = validateField(field, newVal);
+    if (errorMessage) {
+      alert(errorMessage);
+      return;
+    }
+
     if ((profile[field] || "") === (newVal || "")) {
       toggleEdit(field, false);
       return;
     }
+
     try {
       setSavingField(field);
 
@@ -166,24 +202,8 @@ export default function ProfileModal({ isOpen, onClose }) {
   const file = e.target.files?.[0];
   if (!file) return;
 
-  // ✅ 1 MB limit
-  const maxSize = 1 * 1024 * 1024; // 1MB
-  if (file.size > maxSize) {
-    alert("Please choose an image smaller than 1MB");
-    if (fileInputRef.current) fileInputRef.current.value = null;
-    setPreview(null);
-    return;
-  }
+  setUploadingAvatar(true);
 
-  // (optional but recommended) ensure it's an image
-  if (!file.type.startsWith("image/")) {
-    alert("Please select a valid image file");
-    if (fileInputRef.current) fileInputRef.current.value = null;
-    setPreview(null);
-    return;
-  }
-
-  setPreview(URL.createObjectURL(file));
   try {
     const url = await uploadImage(file);
     if (url) {
@@ -194,10 +214,117 @@ export default function ProfileModal({ isOpen, onClose }) {
   } catch (err) {
     console.error("Upload failed", err);
     alert("Failed to upload image.");
-    setPreview(null);
+  } finally {
+    setUploadingAvatar(false);
   }
 };
 
+
+
+const onDocumentPick = async (e, field) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  if (!["image/jpeg", "image/jpg", "image/png"].includes(file.type)) {
+    alert("Only JPG, JPEG, PNG formats allowed");
+    return;
+  }
+
+  if (file.size > 2 * 1024 * 1024) {
+    alert("File must be less than 2MB");
+    return;
+  }
+
+  setUploadingFor(field);
+
+  try {
+    const url = await uploadImage(file);
+
+    // OCR VALIDATION
+    if (field === "aadhaar" || field === "pan") {
+      const ocrResult = await extractTextFromImage(url);
+      console.log("OCR RESULT:", ocrResult);
+
+      if (!ocrResult || !ocrResult.text) {
+        alert("❌ Unable to read text, upload a clearer image");
+        return;
+      }
+
+      // -------- Aadhaar Handling --------
+      if (field === "aadhaar") {
+        const aadhaarMatch = ocrResult.text.match(/\b\d{4}\s?\d{4}\s?\d{4}\b/);
+
+        if (!aadhaarMatch) {
+          alert("❌ Aadhaar number not detected. Upload a clearer picture.");
+          return;
+        }
+
+        const aadhaarNumber = aadhaarMatch[0].replace(/\s+/g, "");
+        console.log("🎯 Aadhaar:", aadhaarNumber);
+
+        // CHECKSUM VALIDATION (fake detection)
+        if (!validateAadhaar(aadhaarNumber)) {
+          alert("❌ Invalid Aadhaar (checksum failed). Possibly fake or incorrect.");
+          return;
+        }
+      }
+
+      // -------- PAN Handling --------
+      if (field === "pan") {
+        const panMatch = ocrResult.text.match(/[A-Z]{5}[0-9]{4}[A-Z]{1}/);
+
+        if (!panMatch) {
+          alert("❌ Invalid PAN format. Please upload a proper PAN card.");
+          return;
+        }
+
+        console.log("🎯 PAN:", panMatch[0]);
+      }
+    }
+
+    // SAVE VALID DOCUMENT IN DB
+    const payload = buildPayload({ [field]: url });
+    await updateProfile(payload);
+    setProfile((p) => ({ ...(p || {}), ...payload }));
+    setDocuments((d) => ({ ...d, [field]: url }));
+
+  } catch (err) {
+    console.error("Document upload failed", err);
+    alert("Failed to upload document");
+  } finally {
+    setUploadingFor("");
+  }
+};
+
+
+
+  // Validation for Full Name, Phone, Address
+  const validateField = (field, value) => {
+    switch (field) {
+      case "fullName":
+        if (!value.trim()) return "Full name is required";
+        if (value.trim().length < 3)
+          return "Full name must be at least 3 characters";
+        if (!/^[a-zA-Z ]+$/.test(value))
+          return "Name must contain only letters";
+        return "";
+
+      case "phone":
+        if (!value.trim()) return "Phone number is required";
+        if (!/^[0-9]{10}$/.test(value))
+          return "Enter a valid 10-digit phone number";
+        return "";
+
+      case "address":
+        if (!value.trim()) return "Address is required";
+        if (value.trim().length < 10)
+          return "Address must be at least 10 characters";
+        return "";
+
+      default:
+        return "";
+    }
+  };
 
   const safe = (v) => (v && String(v).trim() ? v : "—");
 
@@ -225,7 +352,7 @@ export default function ProfileModal({ isOpen, onClose }) {
             role="dialog"
             aria-modal="true"
             aria-label="Profile"
-            className="relative w-full max-w-lg rounded-3xl bg-white shadow-2xl overflow-hidden z-10"
+            className="relative w-full max-w-lg rounded-3xl bg-white shadow-2xl overflow-y-auto max-h-[90vh] z-10"
             initial="hidden"
             animate="visible"
             exit="hidden"
@@ -278,11 +405,12 @@ export default function ProfileModal({ isOpen, onClose }) {
                 </div>
               </div>
 
-              {uploading && (
-                <p className="mt-3 text-center text-xs text-gray-500">
-                  Uploading photo… {Math.round(progress)}%
-                </p>
-              )}
+              {uploadingAvatar && (
+  <p className="mt-3 text-center text-xs text-blue-600 font-semibold">
+    Uploading photo… {Math.round(progress)}%
+  </p>
+)}
+
             </div>
 
             {/* Body */}
@@ -291,7 +419,10 @@ export default function ProfileModal({ isOpen, onClose }) {
                 <div className="space-y-3">
                   <div className="h-6 w-40 bg-gray-200 rounded animate-pulse mx-auto" />
                   {[...Array(4)].map((_, i) => (
-                    <div key={i} className="h-12 bg-gray-100 rounded-xl animate-pulse" />
+                    <div
+                      key={i}
+                      className="h-12 bg-gray-100 rounded-xl animate-pulse"
+                    />
                   ))}
                 </div>
               ) : err ? (
@@ -323,7 +454,10 @@ export default function ProfileModal({ isOpen, onClose }) {
                     onChange={(v) => setDraft((d) => ({ ...d, phone: v }))}
                     onSave={() => saveField("phone")}
                     saving={savingField === "phone"}
-                    inputProps={{ type: "tel", placeholder: "Enter phone number" }}
+                    inputProps={{
+                      type: "tel",
+                      placeholder: "Enter phone number",
+                    }}
                   />
 
                   <EditableInfoRow
@@ -346,6 +480,42 @@ export default function ProfileModal({ isOpen, onClose }) {
                     label="Email"
                     value={safe(userEmail)}
                   />
+                  {/* ------------ DOCUMENT UPLOAD SECTION -------------- */}
+                  <div className="mt-8">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      Documents
+                    </h3>
+
+                    <div className="space-y-4">
+                      {/* Single Item Component */}
+                      <DocumentItem
+                        label="Aadhaar Card"
+                        field="aadhaar"
+                        value={documents.aadhaar}
+                        onPick={onDocumentPick}
+                        uploadingFor={uploadingFor}
+                        progress={progress}
+                      />
+
+                      <DocumentItem
+                        label="PAN Card"
+                        field="pan"
+                        value={documents.pan}
+                        onPick={onDocumentPick}
+                        uploadingFor={uploadingFor}
+                        progress={progress}
+                      />
+
+                      <DocumentItem
+                        label="Passport Size Photo"
+                        field="passportPhoto"
+                        value={documents.passportPhoto}
+                        onPick={onDocumentPick}
+                        uploadingFor={uploadingFor}
+                        progress={progress}
+                      />
+                    </div>
+                  </div>
                 </>
               )}
             </div>
@@ -355,13 +525,59 @@ export default function ProfileModal({ isOpen, onClose }) {
     </AnimatePresence>
   );
 }
+function DocumentItem({ label, value, field, onPick, uploadingFor, progress }) {
+  return (
+    <div className="p-4 rounded-2xl border border-gray-200 bg-white shadow-sm flex justify-between items-center">
+      <div className="w-2/3">
+        <p className="font-medium text-gray-800">{label}</p>
+
+        {uploadingFor === field && (
+          <p className="text-xs text-blue-600 mt-1 font-semibold">
+            Uploading… {Math.round(progress)}%
+          </p>
+        )}
+
+        {value && uploadingFor !== field && (
+          <span className="inline-block mt-1 text-green-600 text-xs font-semibold">
+            ✓ Uploaded
+          </span>
+        )}
+
+        {!value && uploadingFor !== field && (
+          <span className="inline-block mt-1 text-gray-400 text-xs">
+            Not Uploaded
+          </span>
+        )}
+
+        {value && uploadingFor !== field && (
+          <a
+            href={value}
+            target="_blank"
+            className="block text-blue-600 underline text-xs mt-1"
+          >
+            View File
+          </a>
+        )}
+      </div>
+
+      <label className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm cursor-pointer hover:bg-blue-700">
+        {value ? "Replace" : "Upload"}
+        <input
+          type="file"
+          className="hidden"
+          onChange={(e) => onPick(e, field)}
+        />
+      </label>
+    </div>
+  );
+}
 
 /* ---------------- Subcomponents ---------------- */
 
 function StaticInfoRow({ icon, label, value }) {
   const show = value && String(value).trim() ? value : "—";
   return (
-    <div className="flex items-start gap-3 bg-white/80 border border-gray-100 rounded-xl p-3 shadow-sm mb-3">
+    <div className="flex items-start gap-3 bg-white/80 border border-gray-100 rounded-xl p-2 shadow-sm mb-2">
       <div className="mt-0.5">{icon}</div>
       <div className="flex-1">
         <p className="text-xs text-gray-500">{label}</p>
@@ -389,7 +605,7 @@ function EditableInfoRow({
   const show = value && String(value).trim() ? value : "—";
 
   return (
-    <div className="flex items-start gap-3 bg-white/80 border border-gray-100 rounded-xl p-3 shadow-sm mb-3">
+    <div className="flex items-start gap-3 bg-white/80 border border-gray-100 rounded-xl p-2 shadow-sm mb-2">
       <div className="mt-0.5">{icon}</div>
 
       <div className="flex-1">
@@ -431,7 +647,9 @@ function EditableInfoRow({
         </div>
 
         {!editing ? (
-          <p className="text-sm font-medium text-gray-800 mt-1 break-words">{show}</p>
+          <p className="text-sm font-medium text-gray-800 mt-1 break-words">
+            {show}
+          </p>
         ) : inputAsTextArea ? (
           <textarea
             value={draft}
