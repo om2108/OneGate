@@ -1,15 +1,25 @@
+// src/components/dashboard/secretary/Facilities.jsx
 import React, { useState, useMemo, memo } from "react";
 
-function Facilities() {
+/**
+ * Facilities component (self-contained mock data).
+ * Optional prop:
+ *   - societyId (string) : not required — if you later want to fetch from API, pass societyId and replace mock data with an API call.
+ *
+ * This file intentionally keeps a local dataset so it works offline during development.
+ */
+
+function Facilities({ societyId = null }) {
   const [selectedFacility, setSelectedFacility] = useState(null);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
+  // Mock dataset — replace with API call when ready
   const facilities = [
-    { id: 1, name: "Party Hall", capacity: 50, wing: "A", status: "Booked", bookedBy: "Rahul Sharma (Flat 102)", date: "25 Sep 2025", maintenance: "Monthly", remarks: "Needs regular cleaning" },
+    { id: 1, name: "Party Hall", capacity: 50, wing: "A", status: "Booked", bookedBy: "Rahul Sharma (Flat 102)", date: "2025-09-25", maintenance: "Monthly", remarks: "Needs regular cleaning" },
     { id: 2, name: "Gym", capacity: 30, wing: "B", status: "Available", bookedBy: "None", date: "-", maintenance: "Weekly", remarks: "All equipment functional" },
-    { id: 3, name: "Swimming Pool", capacity: 20, wing: "C", status: "Booked", bookedBy: "Kiran Mehta (Flat 305)", date: "20 Sep 2025", maintenance: "Bi-weekly", remarks: "Clean water maintained" },
+    { id: 3, name: "Swimming Pool", capacity: 20, wing: "C", status: "Booked", bookedBy: "Kiran Mehta (Flat 305)", date: "2025-09-20", maintenance: "Bi-weekly", remarks: "Clean water maintained" },
   ];
 
   // Filter logic
@@ -21,13 +31,22 @@ function Facilities() {
     );
   }, [search, typeFilter, statusFilter, facilities]);
 
+  // Derived summary
+  const summary = useMemo(() => {
+    return {
+      total: facilities.length,
+      available: facilities.filter(f => f.status === "Available").length,
+      booked: facilities.filter(f => f.status === "Booked").length,
+    };
+  }, [facilities]);
+
   return (
     <div className="p-4 space-y-6">
       {/* Summary Cards */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Total Facilities", value: facilities.length },
-          { label: "Available Facilities", value: facilities.filter(f => f.status === "Available").length },
+          { label: "Total Facilities", value: summary.total },
+          { label: "Available Facilities", value: summary.available },
           { label: "Bookings Today", value: 5 },
           { label: "Pending Requests", value: 2 },
         ].map((item, i) => (

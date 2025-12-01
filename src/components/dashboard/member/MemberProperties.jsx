@@ -1,8 +1,9 @@
+// src/components/tenant/MemberProperties.jsx
 import React, { useEffect, useMemo, useState, useCallback, useContext } from "react";
 import PropertyCard from "../tenant/PropertyCard";
 import PropertyFilters from "../owner/PropertyCompo/PropertyFilters";
 import { getAllProperties, getRecommendations, recordPropertyClick } from "../../../api/property";
-import { requestAppointment } from "../../../api/appointment";
+import { requestAppointment, scoreAppointment } from "../../../api/appointment";
 import { AuthContext } from "../../../context/AuthContext";
 
 const inr = new Intl.NumberFormat("en-IN", {
@@ -10,6 +11,14 @@ const inr = new Intl.NumberFormat("en-IN", {
   currency: "INR",
   maximumFractionDigits: 0,
 });
+
+function formatRisk(score) {
+  if (score == null) return null;
+  const pct = Math.round(score * 100);
+  if (pct >= 70) return { label: `${pct}% — High risk`, tone: "🔴" };
+  if (pct >= 40) return { label: `${pct}% — Medium risk`, tone: "🟠" };
+  return { label: `${pct}% — Low risk`, tone: "🟢" };
+}
 
 export default function MemberProperties() {
   const { user } = useContext(AuthContext);
@@ -31,11 +40,37 @@ export default function MemberProperties() {
   const [reqTime, setReqTime] = useState("");
   const [reqLocation, setReqLocation] = useState("");
   const [msg, setMsg] = useState("");
+  const [msgColor, setMsgColor] = useState("text-emerald-900");
 
   // recommendations
   const [recs, setRecs] = useState([]);
   const [recLoading, setRecLoading] = useState(false);
   const [recError, setRecError] = useState("");
+
+  // simple session dedupe for clicks
+  const clickedThisSession = React.useRef(new Set());
+
+  const safeRecordClick = useCallback(
+    async (propertyId) => {
+      if (!propertyId) return;
+      if (!user?.token) return;
+      if (clickedThisSession.current.has(propertyId)) return;
+      clickedThisSession.current.add(propertyId);
+
+      try {
+        await recordPropertyClick(propertyId, user.token);
+        console.debug("Recorded property click", propertyId);
+      } catch (err) {
+        const status = err?.response?.status;
+        if (status === 401 || status === 403) {
+          console.debug("recordPropertyClick blocked (401/403) — ignoring for UX:", status, propertyId);
+          return;
+        }
+        console.warn("recordPropertyClick failed:", err);
+      }
+    },
+    [user?.token]
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -105,13 +140,10 @@ export default function MemberProperties() {
     async (p) => {
       setSelected(p);
       setMode("view");
-      try {
-        if (user?.token) await recordPropertyClick(p.id || p._id, user?.token);
-      } catch (e) {
-        console.debug("record click failed", e);
-      }
+      // safe record
+      await safeRecordClick(p.id || p._id);
     },
-    [user?.token]
+    [safeRecordClick]
   );
 
   const openRequest = useCallback((p) => {
@@ -126,11 +158,15 @@ export default function MemberProperties() {
     setReqTime("");
     setReqLocation("");
     setMsg("");
+    setMsgColor("text-emerald-900");
   };
 
   const submitRequest = async (e) => {
     e.preventDefault();
     if (!selected) return;
+    setMsg("");
+    setMsgColor("text-emerald-900");
+
     try {
       let dateTime = null;
       if (reqDate && reqTime) dateTime = `${reqDate}T${reqTime}:00`;
@@ -140,15 +176,35 @@ export default function MemberProperties() {
         dateTime,
         location: reqLocation || selected.location || "",
       };
-      await requestAppointment(payload);
-      setMsg("✅ Request sent — owner will contact you.");
+
+      // 1) create appointment
+      const created = await requestAppointment(payload);
+
+      // 2) try scoring
       try {
-        if (user?.token) await recordPropertyClick(selected.id || selected._id, user?.token);
-      } catch {}
+        const createdId = created?.id || created?._id;
+        if (createdId) {
+          const scored = await scoreAppointment(createdId);
+          const risk = formatRisk(scored?.noShowScore);
+          if (risk) {
+            setMsg(`✅ Request sent — ${risk.tone} ${risk.label}`);
+            setMsgColor(risk.label.includes("High") ? "text-red-700" : risk.label.includes("Medium") ? "text-amber-700" : "text-emerald-900");
+          } else {
+            setMsg(`✅ Request sent. Score unavailable.`);
+          }
+        } else {
+          setMsg(`✅ Request sent. (no id returned for scoring)`);
+        }
+      } catch (scoreErr) {
+        console.warn("Scoring failed after request:", scoreErr);
+        setMsg(`✅ Request sent. (scoring failed)`);
+      }
+
       setTimeout(() => closeModal(), 900);
     } catch (err) {
       console.error("request failed", err);
       setMsg("⚠️ Failed to send request. Try again later.");
+      setMsgColor("text-red-700");
     }
   };
 
@@ -221,7 +277,7 @@ export default function MemberProperties() {
                       {selected.description && <p className="sm:col-span-2">{selected.description}</p>}
                     </div>
                     <div className="mt-4 flex justify-end gap-2">
-                      <button onClick={() => openRequest(selected)} className="px-3 py-2 bg-blue-600 text-white rounded">Request Visit</button>
+                      <button onClick={() => setMode("request")} className="px-3 py-2 bg-blue-600 text-white rounded">Request Visit</button>
                       <button onClick={closeModal} className="px-3 py-2 border rounded">Close</button>
                     </div>
                   </>
@@ -242,7 +298,7 @@ export default function MemberProperties() {
                       </div>
                     </div>
 
-                    {msg && <div className="text-sm text-gray-700">{msg}</div>}
+                    {msg && <div className={`text-sm ${msgColor}`}>{msg}</div>}
 
                     <div className="flex justify-end gap-2">
                       <button type="button" onClick={closeModal} className="px-3 py-2 border rounded">Cancel</button>
