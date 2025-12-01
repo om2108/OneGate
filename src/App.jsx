@@ -27,42 +27,84 @@ const WelcomePage = lazy(() => import("./components/layout/WelcomePage"));
 // DASHBOARD LAYOUTS
 const UserLayout = lazy(() => import("./components/layout/UserLayout"));
 const MemberLayout = lazy(() => import("./components/layout/MemberLayout"));
-const SecretaryLayout = lazy(() => import("./components/layout/SecretaryLayout"));
+const SecretaryLayout = lazy(() =>
+  import("./components/layout/SecretaryLayout")
+);
 const WatchmanLayout = lazy(() => import("./components/layout/WatchmanLayout"));
 const OwnerLayout = lazy(() => import("./components/layout/OwnerLayout"));
 
 // SECRETARY PAGES
-const SecretaryHome = lazy(() => import("./components/dashboard/secretary/SecretaryHome"));
+const SecretaryHome = lazy(() =>
+  import("./components/dashboard/secretary/SecretaryHome")
+);
 const Notices = lazy(() => import("./components/dashboard/secretary/Notices"));
-const Complaints = lazy(() => import("./components/dashboard/secretary/Complaint"));
-const Residents = lazy(() => import("./components/dashboard/secretary/Resident"));
-const Visitors = lazy(() => import("./components/dashboard/secretary/Visitors"));
-const Facilities = lazy(() => import("./components/dashboard/secretary/Facilities"));
+const Complaints = lazy(() =>
+  import("./components/dashboard/secretary/Complaint")
+);
+const Residents = lazy(() =>
+  import("./components/dashboard/secretary/Resident")
+);
+const Visitors = lazy(() =>
+  import("./components/dashboard/secretary/Visitors")
+);
+const Facilities = lazy(() =>
+  import("./components/dashboard/secretary/Facilities")
+);
 const Reports = lazy(() => import("./components/dashboard/secretary/Reports"));
-const Attendance = lazy(() => import("./components/dashboard/secretary/Attendance"));
+const Attendance = lazy(() =>
+  import("./components/dashboard/secretary/Attendance")
+);
+
+
 
 // OWNER PAGES
 const OwnerHome = lazy(() => import("./components/dashboard/owner/OwnerHome"));
-const Properties = lazy(() => import("./components/dashboard/owner/Properties"));
-const TenantRequests = lazy(() => import("./components/dashboard/owner/TenantRequests"));
+const Properties = lazy(() =>
+  import("./components/dashboard/owner/Properties")
+);
+const TenantRequests = lazy(() =>
+  import("./components/dashboard/owner/TenantRequests")
+);
 const Agreements = lazy(() => import("./components/dashboard/owner/Agreement"));
 const UsersList = lazy(() => import("./components/dashboard/owner/UsersList"));
 
 // WATCHMAN
-const VisitorEntry = lazy(() => import("./components/dashboard/watchman/VisitorEntry"));
-const ResidentVerification = lazy(() => import("./components/dashboard/watchman/ResidentVerification"));
+const VisitorEntry = lazy(() =>
+  import("./components/dashboard/watchman/VisitorEntry")
+);
+const ResidentVerification = lazy(() =>
+  import("./components/dashboard/watchman/ResidentVerification")
+);
 const Logs = lazy(() => import("./components/dashboard/watchman/Logs"));
 
 // MEMBER
-const MemberHome = lazy(() => import("./components/dashboard/member/MemberHome"));
-const MemberProperties = lazy(() => import("./components/dashboard/member/MemberProperties"));
-const DuesList = lazy(() => import("./components/dashboard/member/DuesList"));
-const FacilitiesBooking = lazy(() => import("./components/dashboard/member/FacilitiesBooking"));
-const ResidentsList = lazy(() => import("./components/dashboard/member/RecentActivity"));
-const ComplaintsList = lazy(() => import("./components/dashboard/member/CollapsibleSection"));
+const MemberHome = lazy(() =>
+  import("./components/dashboard/member/MemberHome")
+);
+const MemberProperties = lazy(() =>
+  import("./components/dashboard/member/MemberProperties")
+);
+const Maintenance = lazy(() =>
+  import("./components/dashboard/member/Maintenance")
+);
+const Services = lazy(() =>
+  import("./components/dashboard/member/Services")
+);
+const Events = lazy(() =>
+  import("./components/dashboard/member/Events")
+);
+const VisitorsMember = lazy(() =>
+  import("./components/dashboard/member/Visitors")
+);
+const ComplaintsMember = lazy(() =>
+  import("./components/dashboard/member/Complaints")
+);
+const NoticesM = lazy(() => import("./components/dashboard/member/Notices"));
 
 // TENANT USER
-const TenantHome = lazy(() => import("./components/dashboard/tenant/TenantHome"));
+const TenantHome = lazy(() =>
+  import("./components/dashboard/tenant/TenantHome")
+);
 const Unauthorized = lazy(() => import("./components/dashboard/Unauthorized"));
 
 // HELP & CONTACT
@@ -104,7 +146,14 @@ function PageTransition({ children }) {
 function AnimatedRoutes() {
   const location = useLocation();
   // include forgot/reset routes as auth flow pages
-  const authPaths = ["/login", "/register", "/verify", "/onboarding", "/forgot-password", "/reset-password"];
+  const authPaths = [
+    "/login",
+    "/register",
+    "/verify",
+    "/onboarding",
+    "/forgot-password",
+    "/reset-password",
+  ];
   const isAuthPath = authPaths.includes(location.pathname);
 
   return (
@@ -113,12 +162,54 @@ function AnimatedRoutes() {
       <AnimatePresence mode="wait" initial={false}>
         {isAuthPath && (
           <Routes location={location} key={location.pathname}>
-            <Route path="/login" element={<PageTransition><LoginForm /></PageTransition>} />
-            <Route path="/register" element={<PageTransition><RegisterForm /></PageTransition>} />
-            <Route path="/verify" element={<PageTransition><VerifyEmail /></PageTransition>} />
-            <Route path="/onboarding" element={<PageTransition><Onboarding /></PageTransition>} />
-            <Route path="/forgot-password" element={<PageTransition><ForgotPassword /></PageTransition>} />
-            <Route path="/reset-password" element={<PageTransition><ResetPassword /></PageTransition>} />
+            <Route
+              path="/login"
+              element={
+                <PageTransition>
+                  <LoginForm />
+                </PageTransition>
+              }
+            />
+            <Route
+              path="/register"
+              element={
+                <PageTransition>
+                  <RegisterForm />
+                </PageTransition>
+              }
+            />
+            <Route
+              path="/verify"
+              element={
+                <PageTransition>
+                  <VerifyEmail />
+                </PageTransition>
+              }
+            />
+            <Route
+              path="/onboarding"
+              element={
+                <PageTransition>
+                  <Onboarding />
+                </PageTransition>
+              }
+            />
+            <Route
+              path="/forgot-password"
+              element={
+                <PageTransition>
+                  <ForgotPassword />
+                </PageTransition>
+              }
+            />
+            <Route
+              path="/reset-password"
+              element={
+                <PageTransition>
+                  <ResetPassword />
+                </PageTransition>
+              }
+            />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         )}
@@ -133,13 +224,31 @@ function AnimatedRoutes() {
           <Route path="/unauthorized" element={<Unauthorized />} />
 
           {/* HELP & CONTACT */}
-          <Route path="/help" element={<ProtectedRoute><Help /></ProtectedRoute>} />
-          <Route path="/contact" element={<ProtectedRoute><Contact /></ProtectedRoute>} />
+          <Route
+            path="/help"
+            element={
+              <ProtectedRoute>
+                <Help />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/contact"
+            element={
+              <ProtectedRoute>
+                <Contact />
+              </ProtectedRoute>
+            }
+          />
 
           {/* SECRETARY */}
           <Route
             path="/dashboard/secretary/*"
-            element={<ProtectedRoute roles={["SECRETARY"]}><SecretaryLayout /></ProtectedRoute>}
+            element={
+              <ProtectedRoute roles={["SECRETARY"]}>
+                <SecretaryLayout />
+              </ProtectedRoute>
+            }
           >
             <Route index element={<SecretaryHome />} />
             <Route path="notices" element={<Notices />} />
@@ -154,7 +263,11 @@ function AnimatedRoutes() {
           {/* OWNER */}
           <Route
             path="/dashboard/owner/*"
-            element={<ProtectedRoute roles={["OWNER"]}><OwnerLayout /></ProtectedRoute>}
+            element={
+              <ProtectedRoute roles={["OWNER"]}>
+                <OwnerLayout />
+              </ProtectedRoute>
+            }
           >
             <Route index element={<OwnerHome />} />
             <Route path="properties" element={<Properties />} />
@@ -166,30 +279,47 @@ function AnimatedRoutes() {
           {/* MEMBER */}
           <Route
             path="/dashboard/member/*"
-            element={<ProtectedRoute roles={["MEMBER"]}><MemberLayout /></ProtectedRoute>}
+            element={
+              <ProtectedRoute roles={["MEMBER"]}>
+                <MemberLayout />
+              </ProtectedRoute>
+            }
           >
             <Route index element={<MemberHome />} />
-            <Route path="dues" element={<DuesList />} />
-            <Route path="facilities" element={<FacilitiesBooking />} />
-            <Route path="residents" element={<ResidentsList />} />
-            <Route path="complaints" element={<ComplaintsList />} />
             <Route path="properties" element={<MemberProperties />} />
+            <Route path="maintenance" element={<Maintenance />} />
+            <Route path="services" element={<Services />} />
+            <Route path="noticesm" element={<NoticesM />} />
+            <Route path="events" element={<Events />} />
+            <Route path="visitors" element={<VisitorsMember />} />
+            <Route path="complaints" element={<ComplaintsMember />} />
           </Route>
 
           {/* WATCHMAN */}
           <Route
             path="/dashboard/watchman/*"
-            element={<ProtectedRoute roles={["WATCHMAN"]}><WatchmanLayout /></ProtectedRoute>}
+            element={
+              <ProtectedRoute roles={["WATCHMAN"]}>
+                <WatchmanLayout />
+              </ProtectedRoute>
+            }
           >
             <Route index element={<VisitorEntry />} />
-            <Route path="resident-verification" element={<ResidentVerification />} />
+            <Route
+              path="resident-verification"
+              element={<ResidentVerification />}
+            />
             <Route path="logs" element={<Logs />} />
           </Route>
 
           {/* TENANT / USER */}
           <Route
             path="/dashboard/user/*"
-            element={<ProtectedRoute><UserLayout /></ProtectedRoute>}
+            element={
+              <ProtectedRoute>
+                <UserLayout />
+              </ProtectedRoute>
+            }
           >
             <Route index element={<TenantHome />} />
           </Route>
@@ -206,7 +336,13 @@ export default function App() {
   return (
     <AuthProvider>
       <Router>
-        <Suspense fallback={<div className="min-h-screen grid place-items-center">Loading...</div>}>
+        <Suspense
+          fallback={
+            <div className="min-h-screen grid place-items-center">
+              Loading...
+            </div>
+          }
+        >
           <AnimatedRoutes />
         </Suspense>
       </Router>

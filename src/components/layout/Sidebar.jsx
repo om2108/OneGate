@@ -15,38 +15,111 @@ import {
 // links map (unchanged)
 const linksMap = {
   USER: [{ name: "Dashboard", path: "/dashboard/user", icon: HomeIcon }],
-  // snippet from src/components/layout/Sidebar.jsx (replace MEMBER array)
-MEMBER: [
-  { name: "Dashboard", path: "/dashboard/member", icon: HomeIcon },
-  { name: "My Dues", path: "/dashboard/member/dues", icon: CreditCardIcon },
-  { name: "Residents", path: "/dashboard/member/residents", icon: UserGroupIcon },
-  { name: "Complaints", path: "/dashboard/member/complaints", icon: ClipboardDocumentListIcon },
-  { name: "Facilities", path: "/dashboard/member/facilities", icon: CalendarDaysIcon },
-  { name: "Bookings", path: "/dashboard/member/bookings", icon: ClipboardDocumentListIcon },
-  { name: "Explore Properties", path: "/dashboard/member/properties", icon: EyeIcon },
-],
+
+  MEMBER: [
+    { name: "Dashboard", path: "/dashboard/member", icon: HomeIcon },
+    {
+      name: "Maintenance",
+      path: "/dashboard/member/maintenance",
+      icon: CreditCardIcon,
+    },
+    {
+      name: "Services",
+      path: "/dashboard/member/services",
+      icon: UserGroupIcon,
+    },
+    {
+      name: "Events",
+      path: "/dashboard/member/events",
+      icon: CalendarDaysIcon,
+    },
+    {
+      name: "Notices",                  
+      path: "/dashboard/member/noticesm",
+      icon: CalendarDaysIcon,
+    },
+    { name: "Visitors", path: "/dashboard/member/visitors", icon: EyeIcon },
+    {
+      name: "Complaints",
+      path: "/dashboard/member/complaints",
+      icon: ClipboardDocumentListIcon,
+    },
+    {
+      name: "Explore Properties",
+      path: "/dashboard/member/properties",
+      icon: EyeIcon,
+    },
+  ],
 
   OWNER: [
-  { name: "Dashboard", path: "/dashboard/owner", icon: HomeIcon },
-  { name: "Properties", path: "/dashboard/owner/properties", icon: ClipboardDocumentListIcon },
-  { name: "Tenant Requests", path: "/dashboard/owner/tenants", icon: UserGroupIcon },
-  { name: "Agreements", path: "/dashboard/owner/agreements", icon: CreditCardIcon },
-  { name: "User Management", path: "/dashboard/owner/user-list", icon: UserGroupIcon },
-],
+    { name: "Dashboard", path: "/dashboard/owner", icon: HomeIcon },
+    {
+      name: "Properties",
+      path: "/dashboard/owner/properties",
+      icon: ClipboardDocumentListIcon,
+    },
+    {
+      name: "Tenant Requests",
+      path: "/dashboard/owner/tenants",
+      icon: UserGroupIcon,
+    },
+    {
+      name: "Agreements",
+      path: "/dashboard/owner/agreements",
+      icon: CreditCardIcon,
+    },
+    {
+      name: "User Management",
+      path: "/dashboard/owner/user-list",
+      icon: UserGroupIcon,
+    },
+  ],
 
   SECRETARY: [
     { name: "Dashboard", path: "/dashboard/secretary", icon: HomeIcon },
-    { name: "Notices", path: "/dashboard/secretary/notices", icon: ClipboardDocumentListIcon },
-    { name: "Complaints", path: "/dashboard/secretary/complaints", icon: ClipboardDocumentListIcon },
-    { name: "Residents", path: "/dashboard/secretary/residents", icon: UserGroupIcon },
+    {
+      name: "Notices",
+      path: "/dashboard/secretary/notices",
+      icon: ClipboardDocumentListIcon,
+    },
+    {
+      name: "Complaints",
+      path: "/dashboard/secretary/complaints",
+      icon: ClipboardDocumentListIcon,
+    },
+    {
+      name: "Residents",
+      path: "/dashboard/secretary/residents",
+      icon: UserGroupIcon,
+    },
     { name: "Visitors", path: "/dashboard/secretary/visitors", icon: EyeIcon },
-    { name: "Facilities", path: "/dashboard/secretary/facilities", icon: HomeIcon },
-    { name: "Reports", path: "/dashboard/secretary/reports", icon: CreditCardIcon },
+    {
+      name: "Facilities",
+      path: "/dashboard/secretary/facilities",
+      icon: HomeIcon,
+    },
+    {
+      name: "Reports",
+      path: "/dashboard/secretary/reports",
+      icon: CreditCardIcon,
+    },
   ],
   WATCHMAN: [
-    { name: "Visitor Entry", path: "/dashboard/watchman/visitor-entry", icon: EyeIcon },
-    { name: "Resident Verification", path: "/dashboard/watchman/resident-verification", icon: UserGroupIcon },
-    { name: "Logs", path: "/dashboard/watchman/logs", icon: ClipboardDocumentListIcon },
+    {
+      name: "Visitor Entry",
+      path: "/dashboard/watchman/visitor-entry",
+      icon: EyeIcon,
+    },
+    {
+      name: "Resident Verification",
+      path: "/dashboard/watchman/resident-verification",
+      icon: UserGroupIcon,
+    },
+    {
+      name: "Logs",
+      path: "/dashboard/watchman/logs",
+      icon: ClipboardDocumentListIcon,
+    },
   ],
 };
 
@@ -66,7 +139,12 @@ const itemVariants = {
   visible: (i) => ({ opacity: 1, x: 0, transition: { delay: i * 0.03 } }),
 };
 
-export default function Sidebar({ role = "USER", sidebarOpen, setSidebarOpen, modalOpen }) {
+export default function Sidebar({
+  role = "USER",
+  sidebarOpen,
+  setSidebarOpen,
+  modalOpen,
+}) {
   const links = useMemo(() => linksMap[role] || linksMap.USER, [role]);
 
   // Detect desktop (>= 640px) and listen for changes
@@ -79,9 +157,13 @@ export default function Sidebar({ role = "USER", sidebarOpen, setSidebarOpen, mo
     if (typeof window === "undefined" || !window.matchMedia) return;
     const mq = window.matchMedia("(min-width: 640px)");
     const onChange = (e) => setIsDesktop(e.matches);
-    mq.addEventListener ? mq.addEventListener("change", onChange) : mq.addListener(onChange);
+    mq.addEventListener
+      ? mq.addEventListener("change", onChange)
+      : mq.addListener(onChange);
     return () => {
-      mq.removeEventListener ? mq.removeEventListener("change", onChange) : mq.removeListener(onChange);
+      mq.removeEventListener
+        ? mq.removeEventListener("change", onChange)
+        : mq.removeListener(onChange);
     };
   }, []);
 
@@ -101,7 +183,9 @@ export default function Sidebar({ role = "USER", sidebarOpen, setSidebarOpen, mo
         {!isDesktop && sidebarOpen && (
           <motion.div
             key="sidebar-overlay"
-            className={`fixed inset-0 z-40 bg-black/40 ${modalOpen ? "pointer-events-none" : ""}`}
+            className={`fixed inset-0 z-40 bg-black/40 ${
+              modalOpen ? "pointer-events-none" : ""
+            }`}
             initial="hidden"
             animate="visible"
             exit="hidden"
@@ -125,7 +209,6 @@ export default function Sidebar({ role = "USER", sidebarOpen, setSidebarOpen, mo
             modalOpen ? "blur-sm pointer-events-none" : "",
           ].join(" ")}
         >
-
           {/* Links */}
           <nav className="flex-1 overflow-y-auto px-2 py-3">
             <ul className="space-y-1">
@@ -139,7 +222,9 @@ export default function Sidebar({ role = "USER", sidebarOpen, setSidebarOpen, mo
                       [
                         "group relative flex items-center gap-3 rounded-md px-3 py-2 text-sm transition",
                         "hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-200",
-                        isActive ? "bg-blue-100 text-blue-800 font-medium" : "text-gray-700",
+                        isActive
+                          ? "bg-blue-100 text-blue-800 font-medium"
+                          : "text-gray-700",
                       ].join(" ")
                     }
                   >
@@ -198,7 +283,9 @@ export default function Sidebar({ role = "USER", sidebarOpen, setSidebarOpen, mo
                       [
                         "group relative flex items-center gap-3 rounded-md px-3 py-2 text-sm transition",
                         "hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-200",
-                        isActive ? "bg-blue-100 text-blue-800 font-medium" : "text-gray-700",
+                        isActive
+                          ? "bg-blue-100 text-blue-800 font-medium"
+                          : "text-gray-700",
                       ].join(" ")
                     }
                   >
