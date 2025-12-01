@@ -28,7 +28,7 @@ ChartJS.register(
   Legend
 );
 
-const KpiCard = ({ icon, label, value, accent }) => (
+const KpiCard = ({ icon, label, value }) => (
   <div className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition flex flex-col items-start">
     <span className="text-2xl mb-2">{icon}</span>
     <div className="text-gray-500 text-xs sm:text-sm">{label}</div>
@@ -53,6 +53,7 @@ export default function SecretaryHome() {
   const [loadingSocieties, setLoadingSocieties] = useState(true);
   const [loadingData, setLoadingData] = useState(false);
   const [err, setErr] = useState("");
+  const [societiesPermissionDenied, setSocietiesPermissionDenied] = useState(false);
 
   // Helper: date-only key
   const toDateKey = (d) => {
@@ -65,29 +66,40 @@ export default function SecretaryHome() {
   };
   const todayKey = toDateKey(new Date());
 
-  // 1) Load societies for dropdown / binding
-  // For SECRETARY: we will not show dropdown and will clamp to a single society.
+  // 1) Load societies (supports both array return and { societies, permissionDenied })
   useEffect(() => {
     let cancelled = false;
 
     const loadSocieties = async () => {
+      setLoadingSocieties(true);
+      setErr("");
+      setSocietiesPermissionDenied(false);
       try {
-        setLoadingSocieties(true);
-        const data = await getAllSocieties();
+        const res = await getAllSocieties();
         if (cancelled) return;
 
-        const list = Array.isArray(data) ? data : [];
-        setSocieties(list);
+        // support both shapes
+        const list = Array.isArray(res) ? res : (res?.societies ?? []);
+        const pd = res?.permissionDenied === true;
 
-        // If no societyId yet, auto-select the first one
-        if (!societyId && list.length) {
-          const firstId = list[0].id || list[0]._id;
-          setSocietyId(firstId);
-          localStorage.setItem("secretarySocietyId", firstId);
+        if (pd) {
+          setSocieties([]);
+          setSocietiesPermissionDenied(true);
+          return;
         }
 
-        // Extra safety: if secretary somehow has a societyId that is not in the list,
-        // force it back to the first available society.
+        setSocieties(list || []);
+
+        // sync societyId (persist)
+        if (!societyId && list.length) {
+          const firstId = list[0].id || list[0]._id;
+          if (firstId) {
+            setSocietyId(firstId);
+            localStorage.setItem("secretarySocietyId", firstId);
+          }
+        }
+
+        // if secretary and stored societyId no longer exists, fall back
         if (isSecretary && societyId) {
           const exists = list.some((s) => (s.id || s._id) === societyId);
           if (!exists && list.length) {
@@ -104,11 +116,18 @@ export default function SecretaryHome() {
       }
     };
 
-    loadSocieties();
+    // Only load societies if user has rights
+    if (user && ["SECRETARY", "ADMIN"].includes(user.role)) {
+      loadSocieties();
+    } else {
+      setLoadingSocieties(false);
+    }
+
     return () => {
       cancelled = true;
     };
-  }, [isSecretary]); // depends on role
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSecretary, user]); // run when role/user changes
 
   // 2) Load members + complaints + visitors whenever societyId changes
   useEffect(() => {
@@ -116,27 +135,24 @@ export default function SecretaryHome() {
 
     let cancelled = false;
     const loadData = async () => {
+      setLoadingData(true);
+      setErr("");
       try {
-        setErr("");
-        setLoadingData(true);
-
         const membersRes = await getMembers(societyId);
         if (cancelled) return;
-        const mList = Array.isArray(membersRes) ? membersRes : [];
+        const mList = Array.isArray(membersRes) ? membersRes : (membersRes?.members ?? membersRes ?? []);
         setMembers(mList);
 
-        // complaints for that society
         const complaintsRes = await getComplaintsBySociety(societyId);
-        if (!cancelled) {
-          setComplaints(Array.isArray(complaintsRes) ? complaintsRes : []);
-        }
+        if (cancelled) return;
+        const cList = Array.isArray(complaintsRes) ? complaintsRes : (complaintsRes?.complaints ?? complaintsRes ?? []);
+        setComplaints(cList);
 
-        // visitors for that society, filtered by member userIds
         const userIds = mList.map((m) => m.userId).filter(Boolean);
         const visitorsRes = await getVisitors(societyId, userIds);
-        if (!cancelled) {
-          setVisitors(Array.isArray(visitorsRes) ? visitorsRes : []);
-        }
+        if (cancelled) return;
+        const vList = Array.isArray(visitorsRes) ? visitorsRes : (visitorsRes?.visitors ?? visitorsRes ?? []);
+        setVisitors(vList);
       } catch (e) {
         console.error("Failed to load secretary dashboard data:", e);
         if (!cancelled) setErr("Some dashboard data could not be loaded.");
@@ -178,13 +194,11 @@ export default function SecretaryHome() {
     complaints.forEach((c) => {
       const status = (c.status || "").toLowerCase();
       if (status === "resolved" || status === "closed") counts.resolved += 1;
-      else if (status === "in_progress" || status === "in progress")
-        counts.inProgress += 1;
+      else if (status === "in_progress" || status === "in progress") counts.inProgress += 1;
       else counts.pending += 1;
     });
 
-    const total =
-      counts.resolved + counts.pending + counts.inProgress || 1;
+    const total = Math.max(counts.resolved + counts.pending + counts.inProgress, 1);
 
     return {
       counts,
@@ -196,19 +210,19 @@ export default function SecretaryHome() {
     };
   }, [complaints]);
 
-  // Temporary static maintenance data
-  const monthlyMaintenance = {
+  // Temporary static maintenance data (you can replace with real API later)
+  const monthlyMaintenance = useMemo(() => ({
     labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
     amounts: [30000, 40000, 35000, 50000, 45000, 60000],
-  };
+  }), []);
 
   const totalMaintenanceCollected = useMemo(
     () =>
-      monthlyMaintenance.amounts.reduce(
+      (monthlyMaintenance.amounts || []).reduce(
         (sum, amt) => sum + (Number(amt) || 0),
         0
       ),
-    []
+    [monthlyMaintenance]
   );
 
   const cards = [
@@ -320,7 +334,7 @@ export default function SecretaryHome() {
   const currentSocietyName =
     societies.find((s) => (s.id || s._id) === societyId)?.name || "—";
 
-  // If user is not secretary/admin, simple guard
+  // Guard: only secretary/admin can view
   if (user && !["SECRETARY", "ADMIN"].includes(user.role)) {
     return (
       <div className="p-4 text-sm text-red-600">
@@ -352,7 +366,7 @@ export default function SecretaryHome() {
               value={societyId}
               onChange={handleSocietyChange}
               className="px-3 py-2 text-xs sm:text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 min-w-[180px]"
-              disabled={loadingSocieties}
+              disabled={loadingSocieties || societiesPermissionDenied}
             >
               <option value="">-- Choose society --</option>
               {societies.map((s) => (
@@ -365,14 +379,20 @@ export default function SecretaryHome() {
         )}
       </div>
 
-      {/* Info messages */}
+      {/* Info / permission messages */}
+      {societiesPermissionDenied && (
+        <div className="rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-2 text-xs sm:text-sm text-yellow-800">
+          Permission denied: you don't have access to view societies. Contact admin.
+        </div>
+      )}
+
       {err && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-xs sm:text-sm text-amber-800">
           {err}
         </div>
       )}
 
-      {!societyId && !loadingSocieties && (
+      {!societyId && !loadingSocieties && !societiesPermissionDenied && (
         <div className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-2 text-xs sm:text-sm text-sky-800">
           No society selected. Please choose a society from the dropdown to view
           secretary stats.

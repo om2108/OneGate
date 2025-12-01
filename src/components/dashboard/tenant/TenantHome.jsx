@@ -1,15 +1,10 @@
-import React, {
-  useEffect,
-  useMemo,
-  useState,
-  useCallback,
-  useContext,
-} from "react";
-import PropertyCard from "./PropertyCard";
+// src/components/tenant/TenantHome.jsx (updated handleAction part)
+import React, { useEffect, useMemo, useState, useCallback, useContext } from "react";
+import PropertyCard from "../tenant/PropertyCard";
 import PropertyFilters from "../owner/PropertyCompo/PropertyFilters";
 import { getAllProperties, getRecommendations, recordPropertyClick } from "../../../api/property";
 import { getAllSocieties } from "../../../api/society";
-import { requestAppointment } from "../../../api/appointment";
+import { requestAppointment, scoreAppointment } from "../../../api/appointment";
 import { AuthContext } from "../../../context/AuthContext";
 
 const inr = new Intl.NumberFormat("en-IN", {
@@ -17,6 +12,14 @@ const inr = new Intl.NumberFormat("en-IN", {
   currency: "INR",
   maximumFractionDigits: 0,
 });
+
+function formatRisk(score) {
+  if (score == null) return null;
+  const pct = Math.round(score * 100);
+  if (pct >= 70) return { label: `${pct}% — High risk`, tone: "🔴" };
+  if (pct >= 40) return { label: `${pct}% — Medium risk`, tone: "🟠" };
+  return { label: `${pct}% — Low risk`, tone: "🟢" };
+}
 
 export default function TenantHome() {
   const { user } = useContext(AuthContext);
@@ -29,6 +32,7 @@ export default function TenantHome() {
   const [popupMode, setPopupMode] = useState(""); // "view" | "request" | ""
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
+  const [msgColor, setMsgColor] = useState("text-emerald-900");
 
   // request form fields
   const [reqDate, setReqDate] = useState("");
@@ -124,7 +128,6 @@ export default function TenantHome() {
         if (filters.minPrice) body.minPrice = Number(filters.minPrice);
         if (filters.maxPrice) body.maxPrice = Number(filters.maxPrice);
 
-        // pass token only if available; api.js will fallback to its default header if set
         const token = user?.token;
         const data = await getRecommendations(body, token);
         if (!cancelled) {
@@ -134,7 +137,6 @@ export default function TenantHome() {
         console.debug("AI recommend error:", err);
         if (!cancelled) {
           setAiPick(null);
-          // if backend returns 401/403 for some reason, show small message
           const errMsg = err.message || String(err);
           setAiError(errMsg);
         }
@@ -150,21 +152,28 @@ export default function TenantHome() {
     };
   }, [filters.location, filters.minPrice, filters.maxPrice, user?.token]);
 
+  // handleAction: record property click but ignore 403/401 (not allowed)
   const handleAction = useCallback(
     async (action, property) => {
       setSelectedProperty(property);
       setPopupMode(action);
       setSuccessMessage("");
+      setMsgColor("text-emerald-900");
 
-      // record a click/view for personalization (backend will update user vector)
+      // only attempt to record click if we have a token (authenticated client)
+      if (!user?.token) return;
+
       try {
-        // pass token only if present; backend endpoint requires auth for saving clicks
-        if (user?.token) {
-          await recordPropertyClick(property.id || property._id, user?.token);
-        }
+        await recordPropertyClick(property.id || property._id, user.token);
+        // optionally do something on success (no UI change needed)
       } catch (err) {
-        // non-blocking
-        console.debug("record click failed", err);
+        const status = err?.response?.status;
+        if (status === 401 || status === 403) {
+          // Expected when token lacks required role — ignore, log debug info
+          console.debug("recordPropertyClick blocked (status):", status, err?.response?.data);
+        } else {
+          console.warn("recordPropertyClick failed:", err);
+        }
       }
     },
     [user?.token]
@@ -176,6 +185,10 @@ export default function TenantHome() {
 
   const handleSubmitRequest = async (e) => {
     e.preventDefault();
+    if (!selectedProperty) return;
+
+    setSuccessMessage("");
+    setMsgColor("text-emerald-900");
 
     try {
       let dateTime = null;
@@ -192,18 +205,38 @@ export default function TenantHome() {
           "",
       };
 
-      await requestAppointment(payload);
+      // 1) create appointment
+      const created = await requestAppointment(payload);
 
-      setSuccessMessage(
-        `✅ Request sent for "${selectedProperty.name}". You'll be notified when the owner responds.`
-      );
+      // 2) try scoring; scoring failure should NOT block success message
+      try {
+        const createdId = created?.id || created?._id;
+        if (createdId) {
+          const scored = await scoreAppointment(createdId);
+          const risk = formatRisk(scored?.noShowScore);
+          if (risk) {
+            setSuccessMessage(`✅ Request sent for "${selectedProperty.name}". ${risk.tone} ${risk.label}`);
+            setMsgColor(risk.label.includes("High") ? "text-red-700" : risk.label.includes("Medium") ? "text-amber-700" : "text-emerald-900");
+          } else {
+            setSuccessMessage(`✅ Request sent for "${selectedProperty.name}". Score unavailable.`);
+          }
+        } else {
+          setSuccessMessage(`✅ Request sent for "${selectedProperty.name}". (no id returned for scoring)`);
+        }
+      } catch (scoreErr) {
+        console.warn("Scoring failed after request:", scoreErr);
+        setSuccessMessage(`✅ Request sent for "${selectedProperty.name}". (scoring failed)`);
+      }
+
+      // reset modal and form
       setPopupMode("");
       setReqDate("");
       setReqTime("");
       setReqLocation("");
     } catch (err) {
-      console.error(err);
+      console.error("request failed", err);
       setSuccessMessage("⚠️ Failed to send request. Please try again.");
+      setMsgColor("text-red-700");
       setPopupMode("");
     }
   };
@@ -268,7 +301,7 @@ export default function TenantHome() {
 
         {/* Success message */}
         {successMessage && (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-900 text-sm">
+          <div className={`rounded-xl border px-4 py-3 text-sm ${msgColor} ${msgColor === "text-emerald-900" ? "border-emerald-200 bg-emerald-50" : msgColor === "text-red-700" ? "border-red-200 bg-red-50" : "border-amber-200 bg-amber-50"}`}>
             {successMessage}
           </div>
         )}
@@ -313,9 +346,7 @@ export default function TenantHome() {
                   {selectedProperty.image && (
                     <img
                       src={selectedProperty.image}
-                      alt={`${selectedProperty.name} in ${
-                        selectedProperty.area || ""
-                      }`}
+                      alt={`${selectedProperty.name} in ${selectedProperty.area || ""}`}
                       className="w-full h-auto rounded-xl"
                     />
                   )}
@@ -350,15 +381,12 @@ export default function TenantHome() {
                     {"verified" in selectedProperty && (
                       <p>
                         <span className="font-medium">Verified:</span>{" "}
-                        {selectedProperty.verified
-                          ? "✅ Verified Owner"
-                          : "❌ Not Verified"}
+                        {selectedProperty.verified ? "✅ Verified Owner" : "❌ Not Verified"}
                       </p>
                     )}
                     {"rating" in selectedProperty && (
                       <p>
-                        <span className="font-medium">Rating:</span> ⭐{" "}
-                        {selectedProperty.rating} / 5
+                        <span className="font-medium">Rating:</span> ⭐ {selectedProperty.rating} / 5
                       </p>
                     )}
                   </div>
@@ -375,105 +403,35 @@ export default function TenantHome() {
                           <span className="font-medium">Address:</span>{" "}
                           {currentSociety.address || "—"}
                         </p>
-
-                        {Array.isArray(currentSociety.facilities) &&
-                          currentSociety.facilities.length > 0 && (
-                            <p className="sm:col-span-2">
-                              <span className="font-medium">Facilities:</span>{" "}
-                              {currentSociety.facilities.join(", ")}
-                            </p>
-                          )}
-
-                        {(currentSociety.secretaryName ||
-                          currentSociety.secretaryPhone ||
-                          currentSociety.secretary ||
-                          currentSociety.secretaryContact) && (
-                          <p className="sm:col-span-2">
-                            <span className="font-medium">Secretary:</span>{" "}
-                            {currentSociety.secretaryName ||
-                              currentSociety.secretary?.name ||
-                              currentSociety.secretaryContact?.name ||
-                              "—"}
-                            {(currentSociety.secretaryPhone ||
-                              currentSociety.secretary?.phone ||
-                              currentSociety.secretaryContact?.phone) && (
-                              <>
-                                {" "}
-                                (
-                                {currentSociety.secretaryPhone ||
-                                  currentSociety.secretary?.phone ||
-                                  currentSociety.secretaryContact?.phone}
-                                )
-                              </>
-                            )}
-                          </p>
-                        )}
                       </div>
                     </div>
                   )}
 
                   <div className="flex justify-end gap-2 pt-2">
-                    <button
-                      onClick={closePopup}
-                      className="px-3 py-2 rounded-lg border border-gray-300 text-gray-800 hover:bg-gray-50 transition text-sm"
-                    >
-                      Close
-                    </button>
+                    <button onClick={() => { setPopupMode("request"); }} className="px-3 py-2 bg-blue-600 text-white rounded">Request Visit</button>
+                    <button onClick={closePopup} className="px-3 py-2 border rounded">Close</button>
                   </div>
                 </div>
               ) : (
                 <form onSubmit={handleSubmitRequest} className="space-y-3">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                      <label className="block text-sm text-gray-600 mb-1">
-                        Preferred Date
-                      </label>
-                      <input
-                        type="date"
-                        value={reqDate}
-                        onChange={(e) => setReqDate(e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                      />
+                      <label className="block text-sm text-gray-600 mb-1">Preferred Date</label>
+                      <input type="date" value={reqDate} onChange={(e) => setReqDate(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600" />
                     </div>
                     <div>
-                      <label className="block text-sm text-gray-600 mb-1">
-                        Preferred Time
-                      </label>
-                      <input
-                        type="time"
-                        value={reqTime}
-                        onChange={(e) => setReqTime(e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                      />
+                      <label className="block text-sm text-gray-600 mb-1">Preferred Time</label>
+                      <input type="time" value={reqTime} onChange={(e) => setReqTime(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600" />
                     </div>
                     <div>
-                      <label className="block text-sm text-gray-600 mb-1">
-                        Meet Location
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="On-site / Society gate / etc."
-                        value={reqLocation}
-                        onChange={(e) => setReqLocation(e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                      />
+                      <label className="block text-sm text-gray-600 mb-1">Meet Location</label>
+                      <input type="text" placeholder="On-site / Society gate / etc." value={reqLocation} onChange={(e) => setReqLocation(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600" />
                     </div>
                   </div>
 
                   <div className="flex justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={closePopup}
-                      className="px-3 py-2 rounded-lg border border-gray-300 text-gray-800 hover:bg-gray-50 transition text-sm"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-3 py-2 rounded-lg border border-blue-600 bg-blue-600 text-white hover:bg-blue-700 transition text-sm"
-                    >
-                      Send Request
-                    </button>
+                    <button type="button" onClick={closePopup} className="px-3 py-2 rounded-lg border border-gray-300 text-gray-800 hover:bg-gray-50 transition text-sm">Cancel</button>
+                    <button type="submit" className="px-3 py-2 rounded-lg border border-blue-600 bg-blue-600 text-white hover:bg-blue-700 transition text-sm">Send Request</button>
                   </div>
                 </form>
               )}

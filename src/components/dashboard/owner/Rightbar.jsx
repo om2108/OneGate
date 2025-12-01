@@ -1,23 +1,28 @@
 import React, { memo, useEffect, useState, useContext } from "react";
 import { AuthContext } from "../../../context/AuthContext";
-import { fetchRequests, deleteAppointment } from "../../../api/appointment";
+import { fetchRequests, deleteAppointment, scoreAppointment } from "../../../api/appointment";
 import { getAllProperties } from "../../../api/property";
+
+function NoShowBadge({ score }) {
+  if (score == null) return <span className="text-xs text-gray-500">—</span>;
+  const pct = Math.round(score * 100);
+  const highRisk = score >= 0.7;
+  const cls = highRisk ? "text-red-700 bg-red-100 px-2 py-0.5 rounded-full text-xs" : "text-green-700 bg-green-100 px-2 py-0.5 rounded-full text-xs";
+  return <span className={cls}>{pct}%</span>;
+}
 
 function Rightbar() {
   const { user } = useContext(AuthContext);
   const [appointments, setAppointments] = useState([]);
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [scoring, setScoring] = useState({}); // { [id]: boolean }
 
   const fetchAppointments = async () => {
     try {
-      const [apptRes, propRes] = await Promise.all([
-        fetchRequests(),
-        getAllProperties(),
-      ]);
+      const [apptRes, propRes] = await Promise.all([fetchRequests(), getAllProperties()]);
 
-      // only ACCEPTED appointments
-      const accepted = apptRes.filter((appt) => appt.status === "ACCEPTED");
+      const accepted = Array.isArray(apptRes) ? apptRes.filter((appt) => appt.status === "ACCEPTED") : [];
 
       const now = new Date();
       const upcoming = [];
@@ -25,40 +30,27 @@ function Rightbar() {
 
       accepted.forEach((a) => {
         if (!a.dateTime) {
-          // if no dateTime, treat as upcoming to avoid accidental deletion
           upcoming.push(a);
           return;
         }
-
         const apptDate = new Date(a.dateTime);
-
-        if (apptDate < now) {
-          // appointment date/time already passed -> EXPIRED
-          expired.push(a);
-        } else {
-          upcoming.push(a);
-        }
+        if (apptDate < now) expired.push(a);
+        else upcoming.push(a);
       });
 
-      // OPTIONAL: auto delete expired appointments from DB
-      // comment this block if you only want to hide them on UI
+      // optionally auto-delete expired
       if (expired.length > 0) {
         try {
           await Promise.all(
             expired.map((e) =>
-              deleteAppointment(e.id || e._id).catch((err) => {
-                console.error("Failed to auto-delete expired appointment:", err);
-              })
+              deleteAppointment(e.id || e._id).catch(() => {})
             )
           );
-        } catch (err) {
-          console.error("Error while auto-deleting expired appointments:", err);
-        }
+        } catch {}
       }
 
-      // Keep only upcoming (future) accepted appointments in state
       setAppointments(upcoming);
-      setProperties(propRes);
+      setProperties(Array.isArray(propRes) ? propRes : []);
     } catch (err) {
       console.error("Failed to fetch appointments:", err);
     } finally {
@@ -66,29 +58,46 @@ function Rightbar() {
     }
   };
 
+  useEffect(() => {
+    fetchAppointments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const getPropertyName = (propertyId) => {
-    const p = properties.find(
-      (x) => x.id === propertyId || x._id === propertyId
-    );
+    const p = properties.find((x) => x.id === propertyId || x._id === propertyId);
     return p?.name || "Unknown Property";
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this appointment?")) return;
-
     try {
       await deleteAppointment(id);
-      setAppointments((prev) =>
-        prev.filter((appt) => appt.id !== id && appt._id !== id)
-      );
+      setAppointments((prev) => prev.filter((appt) => appt.id !== id && appt._id !== id));
     } catch (err) {
       console.error("Failed to delete appointment:", err);
+      alert("Delete failed");
     }
   };
 
-  useEffect(() => {
-    fetchAppointments();
-  }, []);
+  const handleScore = async (id) => {
+    const key = id || "";
+    setScoring((s) => ({ ...s, [key]: true }));
+    try {
+      const updated = await scoreAppointment(id);
+      setAppointments((prev) =>
+        prev.map((a) => {
+          const aid = a.id || a._id;
+          if (aid === (updated.id || updated._id)) return updated;
+          return a;
+        })
+      );
+    } catch (err) {
+      console.error("Scoring failed:", err);
+      alert("Failed to score appointment.");
+    } finally {
+      setScoring((s) => ({ ...s, [key]: false }));
+    }
+  };
 
   const formatDate = (iso) => {
     if (!iso) return "—";
@@ -102,7 +111,6 @@ function Rightbar() {
     return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
-  // sort by date ascending (nearest first)
   const sortedAppointments = [...appointments].sort((a, b) => {
     const da = a.dateTime ? new Date(a.dateTime) : new Date(0);
     const db = b.dateTime ? new Date(b.dateTime) : new Date(0);
@@ -111,9 +119,7 @@ function Rightbar() {
 
   return (
     <aside className="bg-white shadow-md rounded-lg p-4 w-full sm:w-80">
-      <h3 className="text-lg font-semibold mb-4 text-gray-800">
-        Approved Appointments
-      </h3>
+      <h3 className="text-lg font-semibold mb-4 text-gray-800">Approved Appointments</h3>
 
       {loading ? (
         <p className="text-gray-500 text-center">Loading...</p>
@@ -121,36 +127,46 @@ function Rightbar() {
         <ul className="space-y-3">
           {sortedAppointments.map((appt) => {
             const id = appt.id || appt._id;
+            const score = appt.noShowScore;
+            const last = appt.lastScoredAt;
 
             return (
-              <li
-                key={id}
-                className="flex justify-between items-center bg-gray-50 px-3 py-2 rounded hover:bg-gray-100 transition"
-              >
-                <div>
-                  <p className="font-semibold text-gray-700">
-                    {getPropertyName(appt.propertyId)}
-                  </p>
+              <li key={id} className="flex justify-between items-start bg-gray-50 px-3 py-2 rounded hover:bg-gray-100 transition">
+                <div className="flex-1">
+                  <p className="font-semibold text-gray-700">{getPropertyName(appt.propertyId)}</p>
 
-                  <p className="text-gray-600 text-sm">
-                    📅 {formatDate(appt.dateTime)}
-                  </p>
+                  <div className="flex items-center gap-2 mt-1 text-sm text-gray-600">
+                    <span>📅 {formatDate(appt.dateTime)}</span>
+                    <span>⏰ {formatTime(appt.dateTime)}</span>
+                  </div>
 
-                  <p className="text-gray-600 text-sm">
-                    ⏰ {formatTime(appt.dateTime)}
-                  </p>
+                  <p className="text-gray-500 text-sm mt-1">📍 {appt.location || "No location"}</p>
 
-                  <p className="text-gray-500 text-sm">
-                    📍 {appt.location || "No location"}
-                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-600">No-show</span>
+                      <NoShowBadge score={score} />
+                    </div>
+
+                    {last && (
+                      <span className="text-xs text-gray-500">scored {new Date(last).toLocaleString()}</span>
+                    )}
+                  </div>
                 </div>
 
-                <button
-                  onClick={() => handleDelete(id)}
-                  className="text-red-500 hover:text-red-700 text-lg"
-                >
-                  ✕
-                </button>
+                <div className="flex flex-col items-end gap-2 ml-3">
+                  <button
+                    onClick={() => handleScore(id)}
+                    disabled={!!scoring[id]}
+                    className="text-sm px-3 py-1 rounded bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+                  >
+                    {scoring[id] ? "Scoring…" : "Score"}
+                  </button>
+
+                  <button onClick={() => handleDelete(id)} className="text-red-500 hover:text-red-700 text-lg">
+                    ✕
+                  </button>
+                </div>
               </li>
             );
           })}
