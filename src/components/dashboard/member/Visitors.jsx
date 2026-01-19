@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../../context/AuthContext";
-import { getVisitors, addVisitor, updateVisitorStatus, deleteVisitor } from "../api/visitor";
+import { getVisitors, addVisitor, updateVisitorStatus, deleteVisitor } from "../../../api/visitor";
 
 function VisitorRow({ v, onApprove, onReject, onView }) {
   return (

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { getEvents, createEvent, updateEvent, deleteEvent } from "../../../api/event";
 
 function EventCard({ item, onDetails }) {
+
   return (
     <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition overflow-hidden">
       <img src={item.image} alt={item.title} className="w-full h-48 object-cover" />
@@ -39,22 +40,36 @@ export default function Events() {
   const [activeEvent, setActiveEvent] = useState(null);
 
   useEffect(() => {
-    let mounted = true;
-    async function load() {
-      try {
-        const events = await getEvents();
-        if (!mounted) return;
-        const arr = Array.isArray(events) ? events : [];
-        const now = new Date();
-        setUpcoming(arr.filter(e => !e.date || new Date(e.date) >= now));
-        setPast(arr.filter(e => e.date && new Date(e.date) < now));
-      } catch (err) {
-        console.error("load events:", err);
-      }
+  let mounted = true;
+
+  async function load() {
+    try {
+      // ✅ REAL SOCIETY ID (example)
+      const societyId = "691581042f3a1d3d7fdf35fe";
+
+      // ✅ roles taken from your logged in user
+      // (you can also store roles in localStorage)
+      const roles = ["OWNER", "SECRETARY"]; // change as per login
+
+      const events = await getEvents(societyId, roles);
+
+      if (!mounted) return;
+
+      const arr = Array.isArray(events) ? events : [];
+      const now = new Date();
+
+      // ✅ backend uses "dateTime" not "date"
+      setUpcoming(arr.filter(e => !e.dateTime || new Date(e.dateTime) >= now));
+      setPast(arr.filter(e => e.dateTime && new Date(e.dateTime) < now));
+    } catch (err) {
+      console.error("load events:", err);
     }
-    load();
-    return () => { mounted = false; };
-  }, []);
+  }
+
+  load();
+  return () => { mounted = false; };
+}, []);
+
 
   const openDetails = (ev) => {
     setActiveEvent(ev);

@@ -6,7 +6,7 @@ import {
   updateComplaintStatus,
   deleteComplaint,
   getComplaintById,
-} from "../api/complaint";
+} from "../../../api/complaint";
 
 function Row({ c, onView, onEdit }) {
   return (
