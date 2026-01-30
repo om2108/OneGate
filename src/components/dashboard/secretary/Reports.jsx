@@ -1,120 +1,183 @@
-import React, { useState, useMemo, memo } from "react";
+import React,{useMemo,useState} from "react";
 
-function Reports() {
-  const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
-  const [dateFilter, setDateFilter] = useState("");
-  const [selectedReport, setSelectedReport] = useState(null);
+export default function Reports(){
 
-  const reports = [
-    { id: 1, name: "Resident Occupancy", date: "28 Sep 2025", status: "Completed", type: "Residents" },
-    { id: 2, name: "Visitor Analysis", date: "28 Sep 2025", status: "Pending", type: "Visitors" },
-    { id: 3, name: "Facility Usage", date: "27 Sep 2025", status: "Completed", type: "Facilities" },
-  ];
+const [search,setSearch]=useState("");
+const [type,setType]=useState("");
+const [selected,setSelected]=useState(null);
 
-  const filteredReports = useMemo(() => {
-    return reports.filter(r =>
-      (!search || r.name.toLowerCase().includes(search.toLowerCase())) &&
-      (!typeFilter || r.type === typeFilter) &&
-      (!dateFilter || dateFilter === "All" || r.date.includes(dateFilter))
-    );
-  }, [search, typeFilter, dateFilter, reports]);
+const [reports,setReports]=useState([
+{ id:1,name:"Resident Occupancy",date:"28 Sep 2025",status:"Completed",type:"Residents"},
+{ id:2,name:"Visitor Analysis",date:"28 Sep 2025",status:"Pending",type:"Visitors"},
+{ id:3,name:"Facility Usage",date:"27 Sep 2025",status:"Completed",type:"Facilities"}
+]);
 
-  const handleExport = () => alert("📊 Exporting reports to Excel...");
-  const handlePrint = () => window.print();
+/* ---------------- CSV HELPERS ---------------- */
 
-  const summaryCards = [
-    { label: "Total Reports", value: reports.length, color: "from-indigo-500 to-purple-500" },
-    { label: "Completed Reports", value: reports.filter(r => r.status === "Completed").length, color: "from-green-500 to-emerald-400" },
-    { label: "Pending Reports", value: reports.filter(r => r.status === "Pending").length, color: "from-orange-500 to-amber-400" },
-    { label: "Visitor Reports", value: reports.filter(r => r.type === "Visitors").length, color: "from-pink-500 to-rose-400" },
-    { label: "Facility Reports", value: reports.filter(r => r.type === "Facilities").length, color: "from-blue-500 to-cyan-400" },
-  ];
+const downloadCSV=(csv,filename)=>{
+const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+const url=URL.createObjectURL(blob);
+const link=document.createElement("a");
+link.href=url;
+link.download=filename;
+link.click();
+URL.revokeObjectURL(url);
+};
 
-  return (
-    <div className="p-4 space-y-6">
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <input
-          type="text"
-          placeholder="Search reports..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="border rounded-md p-2 text-sm"
-        />
-        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="border rounded-md p-2 text-sm">
-          <option value="">Report Type</option>
-          <option>Residents</option>
-          <option>Visitors</option>
-          <option>Facilities</option>
-          <option>Maintenance</option>
-        </select>
-        <select value={dateFilter} onChange={e => setDateFilter(e.target.value)} className="border rounded-md p-2 text-sm">
-          <option value="">Date Range</option>
-          <option>Today</option>
-          <option>This Week</option>
-          <option>This Month</option>
-        </select>
-        <button onClick={handleExport} className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded text-sm">Export Excel</button>
-        <button onClick={handlePrint} className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-sm">Print</button>
-      </div>
+const downloadReport=(report)=>{
+const rows=[
+["Name",report.name],
+["Type",report.type],
+["Status",report.status],
+["Date",report.date]
+];
+downloadCSV(rows.map(r=>r.join(",")).join("\n"),`${report.name.replace(/\s+/g,"_")}.csv`);
+};
 
-      {/* Summary Cards */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        {summaryCards.map((c, i) => (
-          <div key={i} className={`p-4 rounded-lg text-white shadow hover:shadow-md bg-gradient-to-r ${c.color} transition`}>
-            <p className="text-sm opacity-90">{c.label}</p>
-            <p className="text-2xl font-semibold mt-1">{c.value}</p>
-          </div>
-        ))}
-      </div>
+const exportAllReports=(list)=>{
+if(!list.length)return alert("No reports to export");
 
-      {/* Report Table */}
-      <div className="bg-white rounded-lg shadow p-4 overflow-x-auto">
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="bg-gray-50 text-gray-700">
-              <th className="p-3 text-left">Report Name</th>
-              <th className="p-3 text-left">Date</th>
-              <th className="p-3 text-left">Status</th>
-              <th className="p-3 text-left">Details</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredReports.length ? (
-              filteredReports.map(r => (
-                <tr key={r.id} className="border-b hover:bg-gray-50 transition text-gray-700">
-                  <td className="p-3">{r.name}</td>
-                  <td className="p-3">{r.date}</td>
-                  <td className={`p-3 font-medium ${r.status === "Completed" ? "text-green-600" : "text-orange-600"}`}>{r.status}</td>
-                  <td className="p-3">
-                    <button onClick={() => setSelectedReport(r)} className="bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-1 rounded text-xs">View</button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="4" className="text-center p-4 text-gray-500">No reports found.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+const header=["Name","Type","Status","Date"];
+const body=list.map(r=>[r.name,r.type,r.status,r.date]);
+downloadCSV([header,...body].map(r=>r.join(",")).join("\n"),"All_Reports.csv");
+};
 
-      {/* Modal */}
-      {selectedReport && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-[90%] max-w-lg relative">
-            <button onClick={() => setSelectedReport(null)} className="absolute top-2 right-3 text-gray-500 hover:text-gray-700 text-xl">&times;</button>
-            <h2 className="text-xl font-semibold mb-2">{selectedReport.name}</h2>
-            <p><strong>Date:</strong> {selectedReport.date}</p>
-            <p><strong>Status:</strong> <span className={`font-medium ${selectedReport.status === "Completed" ? "text-green-600" : "text-orange-600"}`}>{selectedReport.status}</span></p>
-            <p className="mt-3 text-gray-600">Detailed insights, charts, or analytics can be rendered here using Chart.js or backend data.</p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+/* ---------------- GENERATE REPORT ---------------- */
+
+const generateReport=()=>{
+const now=new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
+
+const newReport={
+id:Date.now(),
+name:`Custom Report ${reports.length+1}`,
+date:now,
+status:"Completed",
+type:"General"
+};
+
+setReports(prev=>[newReport,...prev]);
+alert("New report generated!");
+};
+
+/* ----------------------------------------------- */
+
+const filtered=useMemo(()=>reports.filter(r=>
+(!search||r.name.toLowerCase().includes(search.toLowerCase())) &&
+(!type||r.type===type)
+),[search,type,reports]);
+
+const stats={
+total:reports.length,
+completed:reports.filter(x=>x.status==="Completed").length,
+pending:reports.filter(x=>x.status==="Pending").length
+};
+
+return(
+<div className="min-h-screen bg-[#f8fafc] p-10 space-y-10">
+
+<h1 className="text-3xl font-semibold">Reports</h1>
+
+{/* KPIs */}
+<div className="grid md:grid-cols-3 gap-6">
+<Stat label="Total Reports" value={stats.total}/>
+<Stat label="Completed" value={stats.completed}/>
+<Stat label="Pending" value={stats.pending}/>
+</div>
+
+{/* Toolbar */}
+<div className="bg-white rounded-xl shadow-sm p-4 flex flex-wrap gap-4 items-center">
+
+<input
+placeholder="Search..."
+className="border rounded-lg px-4 py-2 text-sm w-64"
+value={search}
+onChange={e=>setSearch(e.target.value)}
+/>
+
+<select className="border rounded-lg px-3 py-2 text-sm" onChange={e=>setType(e.target.value)}>
+<option value="">All Types</option>
+<option>Residents</option>
+<option>Visitors</option>
+<option>Facilities</option>
+<option>General</option>
+</select>
+
+<div className="ml-auto flex gap-3">
+<button
+onClick={()=>exportAllReports(filtered)}
+className="border rounded-lg px-4 py-2 text-sm hover:bg-gray-50">
+Export All
+</button>
+
+<button
+onClick={generateReport}
+className="bg-indigo-600 text-white rounded-lg px-4 py-2 text-sm hover:bg-indigo-700">
+Generate Report
+</button>
+</div>
+
+</div>
+
+{/* Cards */}
+<div className="grid xl:grid-cols-3 gap-8">
+
+{filtered.map(r=>(
+<div key={r.id} className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition p-6 space-y-4">
+
+<div className="flex justify-between">
+<div>
+<p className="font-semibold">{r.name}</p>
+<p className="text-xs text-gray-400">{r.type}</p>
+</div>
+<Status status={r.status}/>
+</div>
+
+<p className="text-sm text-gray-600">Generated on {r.date}</p>
+
+<div className="flex justify-between pt-2">
+<button onClick={()=>setSelected(r)} className="text-indigo-600 text-sm">
+View →
+</button>
+
+<button onClick={()=>downloadReport(r)} className="text-sm text-gray-500">
+Download
+</button>
+</div>
+
+</div>
+))}
+
+</div>
+
+{/* Modal */}
+{selected&&(
+<div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+<div className="bg-white rounded-xl p-6 w-96 space-y-2">
+<h2 className="font-semibold">{selected.name}</h2>
+<p>Type: {selected.type}</p>
+<p>Status: {selected.status}</p>
+<p>Date: {selected.date}</p>
+<button onClick={()=>setSelected(null)} className="mt-3 border px-3 py-1 rounded">Close</button>
+</div>
+</div>
+)}
+
+</div>
+);
 }
 
-export default memo(Reports);
+/* Components */
+
+const Stat=({label,value})=>(
+<div className="bg-white p-5 rounded-xl shadow-sm">
+<p className="text-xs text-gray-400">{label}</p>
+<p className="text-2xl font-bold">{value}</p>
+</div>
+);
+
+const Status=({status})=>(
+<span className={`text-xs px-3 py-1 rounded-full
+${status==="Completed"?"bg-green-100 text-green-700":"bg-orange-100 text-orange-700"}`}>
+{status}
+</span>
+);

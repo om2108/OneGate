@@ -105,6 +105,10 @@ const NoticesM = lazy(() => import("./components/dashboard/member/Notices"));
 const TenantHome = lazy(() =>
   import("./components/dashboard/tenant/TenantHome")
 );
+const TenantPastRequests = lazy(() =>
+  import("./components/dashboard/tenant/TenantPastRequests")
+);
+
 const Unauthorized = lazy(() => import("./components/dashboard/Unauthorized"));
 
 // HELP & CONTACT
@@ -322,6 +326,7 @@ function AnimatedRoutes() {
             }
           >
             <Route index element={<TenantHome />} />
+            <Route path="past-requests" element={<TenantPastRequests />} />
           </Route>
 
           {/* catch-all: redirect to landing (public) */}

@@ -15,6 +15,62 @@ export default function Logs() {
     }
   };
 
+  /* ================= EXPORT CSV ================= */
+
+  const handleExport = () => {
+    const headers = ["Date","Time","Type","Name","Contact","Purpose","Status"];
+
+    const rows = logEntries.map(l =>
+      [l.date,l.time,l.type,l.name,l.contact,l.purpose,l.status]
+    );
+
+    let csv = headers.join(",") + "\n";
+    rows.forEach(r => csv += r.join(",") + "\n");
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "watchman_logs.csv";
+    a.click();
+  };
+
+  /* ================= DOWNLOAD PDF ================= */
+
+  const handleDownload = () => {
+
+    let html = `
+      <h2>Watchman Logs</h2>
+      <table border="1" cellpadding="5" cellspacing="0">
+      <tr>
+        <th>Date</th><th>Time</th><th>Type</th><th>Name</th>
+        <th>Contact</th><th>Purpose</th><th>Status</th>
+      </tr>
+    `;
+
+    logEntries.forEach(l => {
+      html += `
+        <tr>
+          <td>${l.date}</td>
+          <td>${l.time}</td>
+          <td>${l.type}</td>
+          <td>${l.name}</td>
+          <td>${l.contact}</td>
+          <td>${l.purpose}</td>
+          <td>${l.status}</td>
+        </tr>
+      `;
+    });
+
+    html += "</table>";
+
+    const win = window.open("");
+    win.document.write(html);
+    win.print();
+    win.close();
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 px-6 py-8">
       {/* Page title */}
@@ -62,12 +118,19 @@ export default function Logs() {
           </div>
 
           <div className="ml-auto flex gap-3">
-            <button className="px-4 py-2 text-sm font-medium border border-gray-300 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg transition">
-              Export Report
-            </button>
-            <button className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow transition">
-              Download Report
-            </button>
+            <button
+            onClick={handleExport}
+            className="px-4 py-2 text-sm font-medium border border-gray-300 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg transition"
+          >
+            Export Report
+          </button>
+
+          <button
+            onClick={handleDownload}
+            className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow transition"
+          >
+            Download Report
+          </button>
           </div>
         </div>
       </div>

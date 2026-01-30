@@ -1,130 +1,183 @@
-// src/components/dashboard/secretary/Facilities.jsx
-import React, { useState, useMemo, memo } from "react";
+import React,{useMemo,useState} from "react";
 
-/**
- * Facilities component (self-contained mock data).
- * Optional prop:
- *   - societyId (string) : not required — if you later want to fetch from API, pass societyId and replace mock data with an API call.
- *
- * This file intentionally keeps a local dataset so it works offline during development.
- */
+export default function Facilities(){
 
-function Facilities({ societyId = null }) {
-  const [selectedFacility, setSelectedFacility] = useState(null);
-  const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+const [selected,setSelected]=useState(null);
+const [search,setSearch]=useState("");
+const [status,setStatus]=useState("");
 
-  // Mock dataset — replace with API call when ready
-  const facilities = [
-    { id: 1, name: "Party Hall", capacity: 50, wing: "A", status: "Booked", bookedBy: "Rahul Sharma (Flat 102)", date: "2025-09-25", maintenance: "Monthly", remarks: "Needs regular cleaning" },
-    { id: 2, name: "Gym", capacity: 30, wing: "B", status: "Available", bookedBy: "None", date: "-", maintenance: "Weekly", remarks: "All equipment functional" },
-    { id: 3, name: "Swimming Pool", capacity: 20, wing: "C", status: "Booked", bookedBy: "Kiran Mehta (Flat 305)", date: "2025-09-20", maintenance: "Bi-weekly", remarks: "Clean water maintained" },
-  ];
+const [facilities,setFacilities]=useState([
+{ id:1,name:"Party Hall",icon:"🎉",capacity:50,wing:"A",status:"Booked",bookedBy:"Rahul Sharma · 102",date:"25 Sep 2025",maintenance:"Monthly",remarks:"Needs deep cleaning"},
+{ id:2,name:"Gym",icon:"🏋️",capacity:30,wing:"B",status:"Available",bookedBy:"—",date:"-",maintenance:"Weekly",remarks:"Equipment OK"},
+{ id:3,name:"Swimming Pool",icon:"🏊",capacity:20,wing:"C",status:"Booked",bookedBy:"Kiran Mehta · 305",date:"20 Sep 2025",maintenance:"Bi-weekly",remarks:"Water quality normal"}
+]);
 
-  // Filter logic
-  const filteredFacilities = useMemo(() => {
-    return facilities.filter(f =>
-      (!search || f.name.toLowerCase().includes(search.toLowerCase())) &&
-      (!typeFilter || f.name === typeFilter) &&
-      (!statusFilter || f.status === statusFilter)
-    );
-  }, [search, typeFilter, statusFilter, facilities]);
+/* ---------------- ACTIONS ---------------- */
 
-  // Derived summary
-  const summary = useMemo(() => {
-    return {
-      total: facilities.length,
-      available: facilities.filter(f => f.status === "Available").length,
-      booked: facilities.filter(f => f.status === "Booked").length,
-    };
-  }, [facilities]);
+const handleBook=(f)=>{
+setFacilities(p=>p.map(x=>
+x.id===f.id
+?{...x,status:"Booked",bookedBy:"Secretary",date:new Date().toDateString()}
+:x
+));
+};
 
-  return (
-    <div className="p-4 space-y-6">
-      {/* Summary Cards */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: "Total Facilities", value: summary.total },
-          { label: "Available Facilities", value: summary.available },
-          { label: "Bookings Today", value: 5 },
-          { label: "Pending Requests", value: 2 },
-        ].map((item, i) => (
-          <div key={i} className="bg-white p-4 rounded-lg shadow hover:shadow-md transition">
-            <p className="text-sm text-gray-500">{item.label}</p>
-            <p className="text-2xl font-semibold mt-1">{item.value}</p>
-          </div>
-        ))}
-      </div>
+const handleApprove=(f)=>{
+alert("Booking approved!");
+};
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <input
-          type="text"
-          placeholder="Search by name"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="border rounded-md p-2 text-sm w-full sm:w-44"
-        />
-        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="border rounded-md p-2 text-sm">
-          <option value="">Facility Type</option>
-          {[...new Set(facilities.map(f => f.name))].map(t => <option key={t}>{t}</option>)}
-        </select>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border rounded-md p-2 text-sm">
-          <option value="">Status</option>
-          <option>Available</option>
-          <option>Booked</option>
-        </select>
-      </div>
+const handleReject=(f)=>{
+setFacilities(p=>p.map(x=>
+x.id===f.id
+?{...x,status:"Available",bookedBy:"—",date:"-"}
+:x
+));
+};
 
-      {/* Facility List */}
-      <section>
-        <h2 className="text-lg font-semibold mb-3 text-gray-700">Facility Directory</h2>
-        {filteredFacilities.length ? (
-          filteredFacilities.map(f => (
-            <div key={f.id} className="bg-white shadow rounded-lg p-4 mb-3 flex flex-col sm:flex-row justify-between items-start sm:items-center hover:shadow-md transition">
-              <div className="flex-1 mb-3 sm:mb-0">
-                <h4 className="font-semibold">{f.name}</h4>
-                <p className="text-sm text-gray-500">
-                  Capacity: {f.capacity} | Wing {f.wing} | Status:{" "}
-                  <span className={`font-medium ${f.status === "Available" ? "text-green-600" : "text-orange-600"}`}>{f.status}</span>
-                </p>
-                <p className="text-xs text-gray-400">
-                  <strong>Booked By:</strong> {f.bookedBy} {f.date !== "-" && `on ${f.date}`}
-                </p>
-              </div>
+/* ----------------------------------------- */
 
-              <div className="flex flex-wrap gap-2">
-                <button onClick={() => setSelectedFacility(f)} className="bg-indigo-500 text-white px-3 py-1 rounded text-sm hover:bg-indigo-600">View</button>
-                <button className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600">📅 Book</button>
-                <button className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600">✅ Approve</button>
-                <button className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600">❌ Reject</button>
-              </div>
-            </div>
-          ))
-        ) : (
-          <p className="text-gray-500 text-sm mt-4">No facilities found.</p>
-        )}
-      </section>
+const filtered=useMemo(()=>facilities.filter(f=>
+(!search||f.name.toLowerCase().includes(search.toLowerCase())) &&
+(!status||f.status===status)
+),[search,status,facilities]);
 
-      {/* Modal */}
-      {selectedFacility && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50 p-4" onClick={e => e.target === e.currentTarget && setSelectedFacility(null)}>
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
-            <button onClick={() => setSelectedFacility(null)} className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-xl">&times;</button>
+const stats={
+total:facilities.length,
+available:facilities.filter(x=>x.status==="Available").length,
+booked:facilities.filter(x=>x.status==="Booked").length
+};
 
-            <h2 className="text-xl font-semibold mb-2">{selectedFacility.name}</h2>
-            <p><strong>Location:</strong> Wing {selectedFacility.wing}</p>
-            <p><strong>Status:</strong> <span className={`${selectedFacility.status === "Available" ? "text-green-600" : "text-orange-600"} font-medium`}>{selectedFacility.status}</span></p>
-            <p><strong>Capacity:</strong> {selectedFacility.capacity} persons</p>
-            <p><strong>Booked By:</strong> {selectedFacility.bookedBy} {selectedFacility.date !== "-" && `on ${selectedFacility.date}`}</p>
-            <p><strong>Maintenance Schedule:</strong> {selectedFacility.maintenance}</p>
-            <p><strong>Remarks:</strong> {selectedFacility.remarks}</p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+return(
+<div className="min-h-screen bg-[#f8fafc] p-10 space-y-10">
+
+<h1 className="text-3xl font-semibold">Facilities</h1>
+
+{/* KPI */}
+<div className="grid lg:grid-cols-3 gap-6">
+<Stat label="Total Facilities" value={stats.total}/>
+<Stat label="Available" value={stats.available}/>
+<Stat label="Booked" value={stats.booked}/>
+</div>
+
+{/* Toolbar */}
+<div className="bg-white p-4 rounded-xl shadow-sm flex gap-4">
+
+<input
+placeholder="Search..."
+className="border rounded px-4 py-2"
+value={search}
+onChange={e=>setSearch(e.target.value)}
+/>
+
+<select className="border rounded px-3 py-2" onChange={e=>setStatus(e.target.value)}>
+<option value="">All</option>
+<option>Available</option>
+<option>Booked</option>
+</select>
+
+</div>
+
+{/* Cards */}
+<div className="grid xl:grid-cols-3 gap-8">
+
+{filtered.map(f=>(
+<div key={f.id} className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition p-6 space-y-4">
+
+<div className="flex justify-between">
+<div className="flex gap-3 items-center">
+<div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center text-xl">
+{f.icon}
+</div>
+<div>
+<p className="font-semibold">{f.name}</p>
+<p className="text-xs text-gray-400">Wing {f.wing}</p>
+</div>
+</div>
+
+<Status status={f.status}/>
+</div>
+
+<div className="text-sm text-gray-600 space-y-1">
+<p>Capacity: {f.capacity}</p>
+<p>Booked By: {f.bookedBy}</p>
+<p>Date: {f.date}</p>
+</div>
+
+<div className="pt-3 flex justify-between items-center">
+
+<button onClick={()=>setSelected(f)} className="text-indigo-600 text-sm">
+View →
+</button>
+
+<div className="flex gap-3">
+
+{f.status==="Available"&&(
+<button onClick={()=>handleBook(f)} className="text-green-600 text-sm">
+Book
+</button>
+)}
+
+{f.status==="Booked"&&(
+<>
+<button onClick={()=>handleApprove(f)} className="text-indigo-600 text-sm">
+Approve
+</button>
+
+<button onClick={()=>handleReject(f)} className="text-red-600 text-sm">
+Reject
+</button>
+</>
+)}
+
+</div>
+
+</div>
+
+</div>
+))}
+
+</div>
+
+{/* Modal */}
+{selected&&(
+<div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+
+<div className="bg-white rounded-xl p-6 w-[420px] space-y-2">
+
+<h2 className="text-xl font-semibold">{selected.icon} {selected.name}</h2>
+
+<p>Wing: {selected.wing}</p>
+<p>Status: {selected.status}</p>
+<p>Booked By: {selected.bookedBy}</p>
+<p>Maintenance: {selected.maintenance}</p>
+<p className="text-sm text-gray-500">{selected.remarks}</p>
+
+<div className="flex justify-end pt-4">
+<button onClick={()=>setSelected(null)} className="border px-4 py-1 rounded">
+Close
+</button>
+</div>
+
+</div>
+</div>
+)}
+
+</div>
+);
 }
 
-export default memo(Facilities);
+/* Small Components */
+
+const Stat=({label,value})=>(
+<div className="bg-white p-5 rounded-xl shadow-sm">
+<p className="text-xs text-gray-400">{label}</p>
+<p className="text-2xl font-bold">{value}</p>
+</div>
+);
+
+const Status=({status})=>(
+<span className={`text-xs px-3 py-1 rounded-full
+${status==="Available"?"bg-green-100 text-green-700":"bg-orange-100 text-orange-700"}`}>
+{status}
+</span>
+);

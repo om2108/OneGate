@@ -1,12 +1,10 @@
 // src/components/layout/Header.jsx
 import React, { useContext, useEffect, useRef, useState } from "react";
-
 import {
   Bars3Icon,
   MagnifyingGlassIcon,
   BellIcon,
   ChevronDownIcon,
-  UserCircleIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 
@@ -62,34 +60,39 @@ export default function Header({ setSidebarOpen, onOpenProfileModal }) {
     return () => (mounted = false);
   }, [user]);
 
-  const resolveUserId = () =>
-    profile?.id ||
-    profile?._id ||
-    profile?.userId ||
-    user?.id ||
-    user?._id ||
-    user?.userId ||
-    null;
-
   /** -----------------------------------------------
-   * LOAD NOTIFICATIONS
+   * LOAD NOTIFICATIONS (Polling + Event Listener)
    * --------------------------------------------- */
   const fetchNotifications = async () => {
-    const id = resolveUserId();
-    if (!id) return;
+    if (!user) return;
 
     try {
-      const data = await getNotifications(id);
+      const data = await getNotifications();
       setNotifications(data || []);
     } catch (e) {
-      console.error("Notification load error:", e);
+      console.error("Notification load error", e);
     }
   };
 
+  // 1. Initial Load + Polling (Every 5 seconds)
+  // This allows the Owner to see requests without refreshing
   useEffect(() => {
-    if (!user) return setNotifications([]);
-    fetchNotifications();
+    if (!user) return;
+
+    fetchNotifications(); // first load
+
+    const timer = setInterval(fetchNotifications, 3000);
+
+    return () => clearInterval(timer);
   }, [user]);
+
+  // 2. Listen for immediate local refresh (Tenant Side)
+  useEffect(() => {
+    window.addEventListener("refreshNotifications", fetchNotifications);
+
+    return () =>
+      window.removeEventListener("refreshNotifications", fetchNotifications);
+  }, []);
 
   /** -----------------------------------------------
    * CLOSE ON OUTSIDE CLICK
@@ -117,9 +120,7 @@ export default function Header({ setSidebarOpen, onOpenProfileModal }) {
   const submitSearch = (term) => {
     const q = term.trim();
     const params = new URLSearchParams(location.search);
-
     q ? params.set("search", q) : params.delete("search");
-
     navigate(`${location.pathname}?${params.toString()}`);
   };
 
@@ -135,7 +136,10 @@ export default function Header({ setSidebarOpen, onOpenProfileModal }) {
   const name = profile?.fullName || user?.name || user?.email;
   const initial = String(name?.[0] || "U").toUpperCase();
   const role = (profile?.role || user?.role || "").toLowerCase();
-  const unreadCount = notifications.length;
+
+  const unreadCount = notifications.filter(
+    (n) => n.readStatus === "UNREAD",
+  ).length;
 
   const formatDateTime = (dt) => (dt ? new Date(dt).toLocaleString() : "");
 
@@ -173,7 +177,6 @@ export default function Header({ setSidebarOpen, onOpenProfileModal }) {
                 className="relative w-full"
               >
                 <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
-
                 <input
                   name="search"
                   placeholder="Search..."
@@ -196,7 +199,7 @@ export default function Header({ setSidebarOpen, onOpenProfileModal }) {
               {/* Notifications */}
               <div ref={notifRef} className="relative">
                 <button
-                  className="p-2 rounded-md hover:bg-gray-100 relative"
+                  className="p-2 rounded-md hover:bg-gray-100 relative group"
                   onClick={() => {
                     setNotifOpen((prev) => {
                       if (!prev) setMenuOpen(false);
@@ -205,11 +208,13 @@ export default function Header({ setSidebarOpen, onOpenProfileModal }) {
                     fetchNotifications();
                   }}
                 >
-                  <BellIcon className="h-6 w-6 text-gray-600" />
+                  <BellIcon
+                    className={`h-6 w-6 ${unreadCount > 0 ? "text-blue-600" : "text-gray-500"}`}
+                  />
 
                   {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white rounded-full text-[10px] px-1 min-w-[18px] h-[18px] grid place-items-center ring-2 ring-white">
-                      {unreadCount > 9 ? "9+" : unreadCount}
+                    <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full px-1">
+                      {unreadCount}
                     </span>
                   )}
                 </button>
@@ -221,16 +226,21 @@ export default function Header({ setSidebarOpen, onOpenProfileModal }) {
                       absolute bg-white border rounded-xl shadow-lg z-50
                       ${
                         window.innerWidth < 640
-                          ? "left-1/2 -translate-x-[75%] top-[60px] w-[85vw]" // shifted slightly left
+                          ? "left-1/2 -translate-x-[75%] top-[60px] w-[85vw]"
                           : "right-0 mt-2 w-80"
                       }
                     `}
                     style={{ maxHeight: "75vh", overflowY: "auto" }}
                   >
-                    <div className="px-4 py-2 border-b bg-gray-50">
+                    <div className="px-4 py-3 border-b bg-gray-50 flex justify-between items-center">
                       <p className="text-sm font-semibold text-gray-800">
                         Notifications
                       </p>
+                      {unreadCount > 0 && (
+                        <span className="text-xs bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full font-medium">
+                          {unreadCount} New
+                        </span>
+                      )}
                     </div>
 
                     {notifications.length === 0 ? (
@@ -241,18 +251,39 @@ export default function Header({ setSidebarOpen, onOpenProfileModal }) {
                       notifications.map((n) => (
                         <button
                           key={n._id}
-                          className="w-full text-left px-4 py-2.5 border-b hover:bg-gray-50"
+                          className={`w-full text-left px-4 py-3 border-b hover:bg-gray-50 transition-colors ${
+                            n.readStatus === "UNREAD" ? "bg-blue-50/50" : ""
+                          }`}
                           onClick={() => {
                             markNotificationRead(n._id);
                             setNotifications((prev) =>
-                              prev.filter((x) => x._id !== n._id)
+                              prev.map((x) =>
+                                x._id === n._id
+                                  ? { ...x, readStatus: "READ" }
+                                  : x,
+                              ),
                             );
                           }}
                         >
-                          <p className="text-gray-800">{n.message}</p>
-                          <p className="text-[11px] text-gray-400">
-                            {formatDateTime(n.createdAt)}
-                          </p>
+                          <div className="flex gap-3">
+                            <div
+                              className={`mt-1 h-2 w-2 rounded-full flex-shrink-0 ${
+                                n.readStatus === "UNREAD"
+                                  ? "bg-blue-600"
+                                  : "bg-transparent"
+                              }`}
+                            />
+                            <div>
+                              <p
+                                className={`text-sm ${n.readStatus === "UNREAD" ? "font-medium text-gray-900" : "text-gray-600"}`}
+                              >
+                                {n.message}
+                              </p>
+                              <p className="text-[11px] text-gray-400 mt-1">
+                                {formatDateTime(n.createdAt)}
+                              </p>
+                            </div>
+                          </div>
                         </button>
                       ))
                     )}
