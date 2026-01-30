@@ -1,8 +1,18 @@
 // src/components/tenant/TenantHome.jsx (updated handleAction part)
-import React, { useEffect, useMemo, useState, useCallback, useContext } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+  useContext,
+} from "react";
 import PropertyCard from "../tenant/PropertyCard";
 import PropertyFilters from "../owner/PropertyCompo/PropertyFilters";
-import { getAllProperties, getRecommendations, recordPropertyClick } from "../../../api/property";
+import {
+  getAllProperties,
+  getRecommendations,
+  recordPropertyClick,
+} from "../../../api/property";
 import { getAllSocieties } from "../../../api/society";
 import { requestAppointment, scoreAppointment } from "../../../api/appointment";
 import { AuthContext } from "../../../context/AuthContext";
@@ -58,11 +68,22 @@ export default function TenantHome() {
     let mounted = true;
     (async () => {
       try {
-        const [pRes, sRes] = await Promise.allSettled([getAllProperties(), getAllSocieties()]);
+        const [pRes, sRes] = await Promise.allSettled([
+          getAllProperties(),
+          getAllSocieties(),
+        ]);
         if (!mounted) return;
 
-        setProperties(pRes.status === "fulfilled" && Array.isArray(pRes.value) ? pRes.value : []);
-        setSocieties(sRes.status === "fulfilled" && Array.isArray(sRes.value) ? sRes.value : []);
+        setProperties(
+          pRes.status === "fulfilled" && Array.isArray(pRes.value)
+            ? pRes.value
+            : [],
+        );
+        setSocieties(
+          sRes.status === "fulfilled" && Array.isArray(sRes.value)
+            ? sRes.value
+            : [],
+        );
       } catch (e) {
         console.error("TenantHome load error:", e);
       } finally {
@@ -170,13 +191,17 @@ export default function TenantHome() {
         const status = err?.response?.status;
         if (status === 401 || status === 403) {
           // Expected when token lacks required role — ignore, log debug info
-          console.debug("recordPropertyClick blocked (status):", status, err?.response?.data);
+          console.debug(
+            "recordPropertyClick blocked (status):",
+            status,
+            err?.response?.data,
+          );
         } else {
           console.warn("recordPropertyClick failed:", err);
         }
       }
     },
-    [user?.token]
+    [user?.token],
   );
 
   const closePopup = () => {
@@ -197,6 +222,7 @@ export default function TenantHome() {
 
       const payload = {
         propertyId: String(selectedProperty.id || selectedProperty._id),
+        userId: user?.email, // 🔥 ADD THIS LINE
         dateTime,
         location:
           reqLocation ||
@@ -205,8 +231,8 @@ export default function TenantHome() {
           "",
       };
 
-      // 1) create appointment
       const created = await requestAppointment(payload);
+      window.dispatchEvent(new Event("refreshNotifications"));
 
       // 2) try scoring; scoring failure should NOT block success message
       try {
@@ -215,17 +241,31 @@ export default function TenantHome() {
           const scored = await scoreAppointment(createdId);
           const risk = formatRisk(scored?.noShowScore);
           if (risk) {
-            setSuccessMessage(`✅ Request sent for "${selectedProperty.name}". ${risk.tone} ${risk.label}`);
-            setMsgColor(risk.label.includes("High") ? "text-red-700" : risk.label.includes("Medium") ? "text-amber-700" : "text-emerald-900");
+            setSuccessMessage(
+              `✅ Request sent for "${selectedProperty.name}". ${risk.tone} ${risk.label}`,
+            );
+            setMsgColor(
+              risk.label.includes("High")
+                ? "text-red-700"
+                : risk.label.includes("Medium")
+                  ? "text-amber-700"
+                  : "text-emerald-900",
+            );
           } else {
-            setSuccessMessage(`✅ Request sent for "${selectedProperty.name}". Score unavailable.`);
+            setSuccessMessage(
+              `✅ Request sent for "${selectedProperty.name}". Score unavailable.`,
+            );
           }
         } else {
-          setSuccessMessage(`✅ Request sent for "${selectedProperty.name}". (no id returned for scoring)`);
+          setSuccessMessage(
+            `✅ Request sent for "${selectedProperty.name}". (no id returned for scoring)`,
+          );
         }
       } catch (scoreErr) {
         console.warn("Scoring failed after request:", scoreErr);
-        setSuccessMessage(`✅ Request sent for "${selectedProperty.name}". (scoring failed)`);
+        setSuccessMessage(
+          `✅ Request sent for "${selectedProperty.name}". (scoring failed)`,
+        );
       }
 
       // reset modal and form
@@ -263,10 +303,9 @@ export default function TenantHome() {
     );
   }
 
-  const currentSociety =
-    selectedProperty?.societyId
-      ? societyById.get(selectedProperty.societyId)
-      : null;
+  const currentSociety = selectedProperty?.societyId
+    ? societyById.get(selectedProperty.societyId)
+    : null;
 
   return (
     <section className="p-4 sm:p-6 lg:p-8">
@@ -286,9 +325,13 @@ export default function TenantHome() {
           </p>
 
           {aiLoading ? (
-            <p className="mt-1 text-sm text-blue-900">Calculating recommendation…</p>
+            <p className="mt-1 text-sm text-blue-900">
+              Calculating recommendation…
+            </p>
           ) : aiError ? (
-            <p className="mt-1 text-sm text-red-700">Recommendation error: {aiError}</p>
+            <p className="mt-1 text-sm text-red-700">
+              Recommendation error: {aiError}
+            </p>
           ) : aiPick ? (
             <p className="mt-1 text-sm text-blue-900">
               🏠 <span className="font-medium">{aiPick.name}</span> — Best value
@@ -301,7 +344,9 @@ export default function TenantHome() {
 
         {/* Success message */}
         {successMessage && (
-          <div className={`rounded-xl border px-4 py-3 text-sm ${msgColor} ${msgColor === "text-emerald-900" ? "border-emerald-200 bg-emerald-50" : msgColor === "text-red-700" ? "border-red-200 bg-red-50" : "border-amber-200 bg-amber-50"}`}>
+          <div
+            className={`rounded-xl border px-4 py-3 text-sm ${msgColor} ${msgColor === "text-emerald-900" ? "border-emerald-200 bg-emerald-50" : msgColor === "text-red-700" ? "border-red-200 bg-red-50" : "border-amber-200 bg-amber-50"}`}
+          >
             {successMessage}
           </div>
         )}
@@ -358,9 +403,7 @@ export default function TenantHome() {
                     </p>
                     <p>
                       <span className="font-medium">Society:</span>{" "}
-                      {currentSociety?.name ||
-                        selectedProperty.society ||
-                        "—"}
+                      {currentSociety?.name || selectedProperty.society || "—"}
                     </p>
                     {selectedProperty.surroundings && (
                       <p className="sm:col-span-2">
@@ -381,12 +424,15 @@ export default function TenantHome() {
                     {"verified" in selectedProperty && (
                       <p>
                         <span className="font-medium">Verified:</span>{" "}
-                        {selectedProperty.verified ? "✅ Verified Owner" : "❌ Not Verified"}
+                        {selectedProperty.verified
+                          ? "✅ Verified Owner"
+                          : "❌ Not Verified"}
                       </p>
                     )}
                     {"rating" in selectedProperty && (
                       <p>
-                        <span className="font-medium">Rating:</span> ⭐ {selectedProperty.rating} / 5
+                        <span className="font-medium">Rating:</span> ⭐{" "}
+                        {selectedProperty.rating} / 5
                       </p>
                     )}
                   </div>
@@ -408,30 +454,75 @@ export default function TenantHome() {
                   )}
 
                   <div className="flex justify-end gap-2 pt-2">
-                    <button onClick={() => { setPopupMode("request"); }} className="px-3 py-2 bg-blue-600 text-white rounded">Request Visit</button>
-                    <button onClick={closePopup} className="px-3 py-2 border rounded">Close</button>
+                    <button
+                      onClick={() => {
+                        setPopupMode("request");
+                      }}
+                      className="px-3 py-2 bg-blue-600 text-white rounded"
+                    >
+                      Request Visit
+                    </button>
+                    <button
+                      onClick={closePopup}
+                      className="px-3 py-2 border rounded"
+                    >
+                      Close
+                    </button>
                   </div>
                 </div>
               ) : (
                 <form onSubmit={handleSubmitRequest} className="space-y-3">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                      <label className="block text-sm text-gray-600 mb-1">Preferred Date</label>
-                      <input type="date" value={reqDate} onChange={(e) => setReqDate(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                      <label className="block text-sm text-gray-600 mb-1">
+                        Preferred Date
+                      </label>
+                      <input
+                        type="date"
+                        value={reqDate}
+                        onChange={(e) => setReqDate(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      />
                     </div>
                     <div>
-                      <label className="block text-sm text-gray-600 mb-1">Preferred Time</label>
-                      <input type="time" value={reqTime} onChange={(e) => setReqTime(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                      <label className="block text-sm text-gray-600 mb-1">
+                        Preferred Time
+                      </label>
+                      <input
+                        type="time"
+                        value={reqTime}
+                        onChange={(e) => setReqTime(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      />
                     </div>
                     <div>
-                      <label className="block text-sm text-gray-600 mb-1">Meet Location</label>
-                      <input type="text" placeholder="On-site / Society gate / etc." value={reqLocation} onChange={(e) => setReqLocation(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                      <label className="block text-sm text-gray-600 mb-1">
+                        Meet Location
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="On-site / Society gate / etc."
+                        value={reqLocation}
+                        onChange={(e) => setReqLocation(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      />
                     </div>
                   </div>
 
                   <div className="flex justify-end gap-2">
-                    <button type="button" onClick={closePopup} className="px-3 py-2 rounded-lg border border-gray-300 text-gray-800 hover:bg-gray-50 transition text-sm">Cancel</button>
-                    <button type="submit" className="px-3 py-2 rounded-lg border border-blue-600 bg-blue-600 text-white hover:bg-blue-700 transition text-sm">Send Request</button>
+                    <button
+                      type="button"
+                      onClick={closePopup}
+                      className="px-3 py-2 rounded-lg border border-gray-300 text-gray-800 hover:bg-gray-50 transition text-sm"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-3 py-2 rounded-lg border border-blue-600 bg-blue-600 text-white hover:bg-blue-700 transition text-sm"
+                    >
+                      Send Request
+                    </button>
                   </div>
                 </form>
               )}

@@ -14,7 +14,14 @@ import {
 
 // links map (unchanged)
 const linksMap = {
-  USER: [{ name: "Dashboard", path: "/dashboard/user", icon: HomeIcon }],
+  USER: [
+  { name: "Dashboard", path: "/dashboard/user", icon: HomeIcon },
+  {
+    name: "Past Requests",
+    path: "/dashboard/user/past-requests",
+    icon: ClipboardDocumentListIcon,
+  },
+],
 
   MEMBER: [
     { name: "Dashboard", path: "/dashboard/member", icon: HomeIcon },
@@ -105,22 +112,22 @@ const linksMap = {
     },
   ],
   WATCHMAN: [
-    {
-      name: "Visitor Entry",
-      path: "/dashboard/watchman/visitor-entry",
-      icon: EyeIcon,
-    },
-    {
-      name: "Resident Verification",
-      path: "/dashboard/watchman/resident-verification",
-      icon: UserGroupIcon,
-    },
-    {
-      name: "Logs",
-      path: "/dashboard/watchman/logs",
-      icon: ClipboardDocumentListIcon,
-    },
-  ],
+  {
+    name: "Visitor Entry",
+    path: "/dashboard/watchman",
+    icon: EyeIcon,
+  },
+  {
+    name: "Resident Verification",
+    path: "/dashboard/watchman/resident-verification",
+    icon: UserGroupIcon,
+  },
+  {
+    name: "Logs",
+    path: "/dashboard/watchman/logs",
+    icon: ClipboardDocumentListIcon,
+  },
+],
 };
 
 // motion variants (mobile)

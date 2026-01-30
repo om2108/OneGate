@@ -1,330 +1,162 @@
-// src/components/dashboard/secretary/Complaint.jsx
-import React, { useState, useMemo, useEffect, memo } from "react";
+import React,{useState,useMemo,useEffect,memo} from "react";
 import {
-  getComplaintsBySociety,
-  updateComplaintStatus,
-  deleteComplaint as deleteComplaintApi,
+getComplaintsBySociety,
+updateComplaintStatus,
+deleteComplaint as deleteComplaintApi
 } from "../../../api/complaint";
 
-const CATEGORY_OPTIONS = ["All", "Maintenance", "Security", "Other"];
-const STATUS_OPTIONS = ["All", "Pending", "In Progress", "Resolved"];
-const PRIORITY_OPTIONS = ["All", "Low", "Medium", "High"];
+const CATEGORY=["All","Maintenance","Security","Other"];
+const STATUS=["All","Pending","In Progress","Resolved"];
+const PRIORITY=["All","Low","Medium","High"];
 
-const Select = memo(({ value, options, onChange }) => (
-  <select
-    value={value}
-    onChange={(e) => onChange(e.target.value)}
-    className="border rounded-md px-3 py-1.5 text-sm w-full sm:w-auto"
-  >
-    {options.map((opt) => (
-      <option key={opt} value={opt}>
-        {opt}
-      </option>
-    ))}
-  </select>
-));
+export default memo(function Complaint(){
 
-function Complaint() {
-  const [complaints, setComplaints] = useState([]);
-  const [filters, setFilters] = useState({
-    category: "All",
-    status: "All",
-    priority: "All",
-  });
+const [complaints,setComplaints]=useState([]);
+const [filters,setFilters]=useState({category:"All",status:"All",priority:"All"});
+const [editing,setEditing]=useState(null);
+const [edit,setEdit]=useState({status:"",assignedTo:"",priority:""});
+const [loading,setLoading]=useState(true);
 
-  const [editingId, setEditingId] = useState(null);
-  const [editData, setEditData] = useState({
-    status: "",
-    assignedTo: "",
-    priority: "",
-  });
+useEffect(()=>{
+(async()=>{
+const societyId=localStorage.getItem("secretarySocietyId");
+if(!societyId) return;
 
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState("");
+const data=await getComplaintsBySociety(societyId);
 
-  // Load complaints from API for selected society
-  useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        setErr("");
+setComplaints((data||[]).map(c=>({
+id:c.id||c._id,
+title:c.description||"Complaint",
+category:c.category||"Other",
+date:c.createdAt?.slice(0,10),
+status:c.status||"Pending",
+assignedTo:c.assignedTo||"",
+priority:c.priority||"Medium"
+})));
 
-        // same key you used in SecretaryHome
-        const societyId = localStorage.getItem("secretarySocietyId");
-        if (!societyId) {
-          setErr("No society selected for complaints.");
-          setComplaints([]);
-          return;
-        }
+setLoading(false);
+})();
+},[]);
 
-        const data = await getComplaintsBySociety(societyId);
+const list=useMemo(()=>complaints.filter(c=>
+(filters.category==="All"||c.category===filters.category)&&
+(filters.status==="All"||c.status===filters.status)&&
+(filters.priority==="All"||c.priority===filters.priority)
+),[complaints,filters]);
 
-        const mapped =
-          Array.isArray(data) &&
-          data.map((c) => ({
-            id: c.id || c._id,
-            title: c.description || "Complaint",
-            category: c.category || "Other",
-            date: c.createdAt ? String(c.createdAt).slice(0, 10) : "",
-            status: c.status || "Pending",
-            // backend: assignedTo is List<String>
-            assignedTo: Array.isArray(c.assignedTo)
-              ? c.assignedTo.join(", ")
-              : c.assignedTo || "",
-            priority: c.priority || "Medium",
-          }));
+const open=(c)=>{
+setEditing(c);
+setEdit({status:c.status,assignedTo:c.assignedTo,priority:c.priority});
+};
 
-        setComplaints(mapped || []);
-      } catch (e) {
-        console.error("Failed to load complaints", e);
-        setErr("Failed to load complaints.");
-      } finally {
-        setLoading(false);
-      }
-    };
+const save=async()=>{
+await updateComplaintStatus(editing.id,edit.status,edit.priority);
+setComplaints(p=>p.map(x=>x.id===editing.id?{...x,...edit}:x));
+setEditing(null);
+};
 
-    load();
-  }, []);
+const remove=async(c)=>{
+if(!window.confirm("Delete complaint?"))return;
+await deleteComplaintApi(c.id);
+setComplaints(p=>p.filter(x=>x.id!==c.id));
+};
 
-  const filteredComplaints = useMemo(
-    () =>
-      complaints.filter(
-        (c) =>
-          (filters.category === "All" || c.category === filters.category) &&
-          (filters.status === "All" || c.status === filters.status) &&
-          (filters.priority === "All" || c.priority === filters.priority)
-      ),
-    [complaints, filters]
-  );
+return(
+<div className="p-8 bg-slate-50 min-h-screen space-y-6">
 
-  const handleFilterChange = (key, value) =>
-    setFilters((prev) => ({ ...prev, [key]: value }));
+{/* Header */}
+<div>
+<h2 className="text-3xl font-bold">Complaints</h2>
+<p className="text-sm text-gray-500">Track and resolve society issues</p>
+</div>
 
-  const openEditModal = (complaint) => {
-    setEditingId(complaint.id);
-    setEditData({
-      status: complaint.status,
-      assignedTo: complaint.assignedTo,
-      priority: complaint.priority,
-    });
-  };
+{/* Filters */}
+<div className="flex gap-3 flex-wrap">
+{[CATEGORY,STATUS,PRIORITY].map((arr,i)=>(
+<select key={i}
+className="border rounded-lg px-3 py-2 text-sm"
+onChange={e=>setFilters(p=>({...p,[["category","status","priority"][i]]:e.target.value}))}>
+{arr.map(x=><option key={x}>{x}</option>)}
+</select>
+))}
+</div>
 
-  const closeEditModal = () => {
-    setEditingId(null);
-  };
+{/* Cards */}
+{loading?(
+<p className="text-gray-400">Loading...</p>
+):list.length===0?(
+<p className="text-gray-400">No complaints found.</p>
+):(
+<div className="grid md:grid-cols-3 gap-6">
 
-  const saveEdit = async () => {
-    if (!editingId) return;
+{list.map(c=>(
+<div key={c.id} className="bg-white rounded-2xl shadow hover:shadow-lg transition p-5 space-y-3">
 
-    try {
-      // Persist only status + priority to backend
-      await updateComplaintStatus(editingId, editData.status, editData.priority);
+<div className="flex justify-between">
+<h3 className="font-semibold">{c.title}</h3>
+<span className={`text-xs px-2 py-1 rounded
+${c.status==="Resolved"?"bg-green-100 text-green-700":
+c.status==="In Progress"?"bg-blue-100 text-blue-700":
+"bg-yellow-100 text-yellow-700"}`}>
+{c.status}
+</span>
+</div>
 
-      // Update local state (including assignedTo for UI only)
-      setComplaints((prev) =>
-        prev.map((c) =>
-          c.id === editingId ? { ...c, ...editData } : c
-        )
-      );
-      closeEditModal();
-    } catch (e) {
-      console.error("Failed to update complaint", e);
-      alert("Failed to update complaint. Please try again.");
-    }
-  };
+<p className="text-xs text-gray-400">{c.date}</p>
 
-  const deleteComplaint = async (complaint) => {
-    if (!window.confirm("Delete this complaint?")) return;
-    if (!complaint.id) {
-      // just remove locally if somehow no id
-      setComplaints((prev) => prev.filter((c) => c !== complaint));
-      return;
-    }
+<div className="flex justify-between text-sm">
+<span className="text-gray-500">{c.category}</span>
+<span className={`text-xs px-2 py-1 rounded
+${c.priority==="High"?"bg-red-100 text-red-700":
+c.priority==="Medium"?"bg-orange-100 text-orange-700":
+"bg-gray-100 text-gray-600"}`}>
+{c.priority}
+</span>
+</div>
 
-    try {
-      await deleteComplaintApi(complaint.id);
-      setComplaints((prev) => prev.filter((c) => c.id !== complaint.id));
-    } catch (e) {
-      console.error("Failed to delete complaint", e);
-      alert(e?.response?.data || "Failed to delete complaint. Only resolved complaints can be deleted.");
-    }
-  };
+<div className="flex justify-end gap-2 pt-2">
+<button onClick={()=>open(c)} className="text-blue-600 text-sm">Edit</button>
+<button onClick={()=>remove(c)} className="text-red-500 text-sm">Delete</button>
+</div>
 
-  const editingComplaint = complaints.find((c) => c.id === editingId) || null;
+</div>
+))}
+</div>
+)}
 
-  return (
-    <div className="space-y-6 p-4">
-      <h2 className="text-2xl font-semibold">🧾 Complaints</h2>
+{/* Modal */}
+{editing&&(
+<div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+<div className="bg-white rounded-xl p-6 w-full max-w-md space-y-4">
 
-      {err && (
-        <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 mb-2">
-          {err}
-        </div>
-      )}
+<h3 className="text-xl font-semibold">Edit Complaint</h3>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-4">
-        <Select
-          value={filters.category}
-          options={CATEGORY_OPTIONS}
-          onChange={(v) => handleFilterChange("category", v)}
-        />
-        <Select
-          value={filters.status}
-          options={STATUS_OPTIONS}
-          onChange={(v) => handleFilterChange("status", v)}
-        />
-        <Select
-          value={filters.priority}
-          options={PRIORITY_OPTIONS}
-          onChange={(v) => handleFilterChange("priority", v)}
-        />
-      </div>
+<select className="border p-2 rounded w-full"
+value={edit.status}
+onChange={e=>setEdit({...edit,status:e.target.value})}>
+{STATUS.filter(x=>x!=="All").map(x=><option key={x}>{x}</option>)}
+</select>
 
-      {/* Table */}
-      <div className="overflow-x-auto bg-white shadow-md rounded-lg">
-        <table className="min-w-full text-sm text-left border-collapse">
-          <thead className="bg-gray-100 text-gray-700">
-            <tr>
-              {[
-                "Title",
-                "Category",
-                "Date",
-                "Status",
-                "Assigned To",
-                "Priority",
-                "Actions",
-              ].map((h) => (
-                <th key={h} className="p-3 border-b">
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td
-                  colSpan="7"
-                  className="p-4 text-center text-gray-500 italic"
-                >
-                  Loading complaints…
-                </td>
-              </tr>
-            ) : filteredComplaints.length > 0 ? (
-              filteredComplaints.map((c) => (
-                <tr key={c.id || c.title} className="hover:bg-gray-50">
-                  <td className="p-3 border-b">{c.title}</td>
-                  <td className="p-3 border-b">{c.category}</td>
-                  <td className="p-3 border-b">{c.date}</td>
-                  <td className="p-3 border-b">{c.status}</td>
-                  <td className="p-3 border-b">{c.assignedTo}</td>
-                  <td className="p-3 border-b">{c.priority}</td>
-                  <td className="p-3 border-b text-center space-x-2">
-                    <button
-                      onClick={() => openEditModal(c)}
-                      className="px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      onClick={() => deleteComplaint(c)}
-                      className="px-2 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200"
-                    >
-                      🗑️
-                    </button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td
-                  colSpan="7"
-                  className="p-4 text-center text-gray-500"
-                >
-                  No complaints found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+<input className="border p-2 rounded w-full"
+placeholder="Assigned to"
+value={edit.assignedTo}
+onChange={e=>setEdit({...edit,assignedTo:e.target.value})}/>
 
-      {/* Edit Modal */}
-      {editingComplaint && (
-        <div
-          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
-          onClick={(e) =>
-            e.target === e.currentTarget && closeEditModal()
-          }
-        >
-          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
-            <h3 className="text-lg font-semibold mb-4">Edit Complaint</h3>
+<select className="border p-2 rounded w-full"
+value={edit.priority}
+onChange={e=>setEdit({...edit,priority:e.target.value})}>
+{PRIORITY.filter(x=>x!=="All").map(x=><option key={x}>{x}</option>)}
+</select>
 
-            <label className="block text-sm mb-1">Status</label>
-            <select
-              value={editData.status}
-              onChange={(e) =>
-                setEditData((prev) => ({
-                  ...prev,
-                  status: e.target.value,
-                }))
-              }
-              className="w-full border rounded-md px-3 py-1.5 mb-3"
-            >
-              {STATUS_OPTIONS.filter((s) => s !== "All").map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-            </select>
+<div className="flex justify-end gap-3">
+<button onClick={()=>setEditing(null)} className="text-gray-500">Cancel</button>
+<button onClick={save} className="bg-indigo-600 text-white px-4 py-2 rounded">Save</button>
+</div>
 
-            <label className="block text-sm mb-1">Assigned To</label>
-            <input
-              type="text"
-              value={editData.assignedTo}
-              onChange={(e) =>
-                setEditData((prev) => ({
-                  ...prev,
-                  assignedTo: e.target.value,
-                }))
-              }
-              className="w-full border rounded-md px-3 py-1.5 mb-3"
-            />
+</div>
+</div>
+)}
 
-            <label className="block text-sm mb-1">Priority</label>
-            <select
-              value={editData.priority}
-              onChange={(e) =>
-                setEditData((prev) => ({
-                  ...prev,
-                  priority: e.target.value,
-                }))
-              }
-              className="w-full border rounded-md px-3 py-1.5 mb-4"
-            >
-              {PRIORITY_OPTIONS.filter((p) => p !== "All").map((p) => (
-                <option key={p}>{p}</option>
-              ))}
-            </select>
-
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={closeEditModal}
-                className="px-4 py-1.5 rounded-md border border-gray-300 hover:bg-gray-100"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={saveEdit}
-                className="px-4 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default memo(Complaint);
+</div>
+);
+});
