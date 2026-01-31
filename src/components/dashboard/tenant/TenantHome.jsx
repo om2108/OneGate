@@ -222,7 +222,6 @@ export default function TenantHome() {
 
       const payload = {
         propertyId: String(selectedProperty.id || selectedProperty._id),
-        userId: user?.email, // 🔥 ADD THIS LINE
         dateTime,
         location:
           reqLocation ||
@@ -232,7 +231,6 @@ export default function TenantHome() {
       };
 
       const created = await requestAppointment(payload);
-      window.dispatchEvent(new Event("refreshNotifications"));
 
       // 2) try scoring; scoring failure should NOT block success message
       try {

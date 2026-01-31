@@ -27,7 +27,6 @@ export default function Properties() {
       setError(null);
       try {
         const data = await getAllProperties();
-        console.log("Fetched properties:", data);
         setPropertiesData(data);
 
         // 🔹 Extract unique filter values

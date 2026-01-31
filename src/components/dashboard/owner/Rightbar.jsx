@@ -44,7 +44,6 @@ function Rightbar() {
         getAllProperties(),
       ]);
 
-      console.log("Appointments API:", apptRes);
 
       // Case-insensitive ACCEPTED filter
       const accepted = Array.isArray(apptRes)

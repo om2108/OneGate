@@ -14,7 +14,13 @@ export const AuthProvider = ({ children }) => {
       try {
         setAuthToken(token);
         const payload = JSON.parse(atob(token.split(".")[1]));
-        setUser({ email: payload.sub, role: payload.role, token });
+
+        setUser({
+          id: payload.id, // ⭐ ADD THIS
+          email: payload.sub,
+          role: payload.role,
+          token,
+        });
       } catch (err) {
         console.error("Invalid token:", err);
         logout();
@@ -28,7 +34,18 @@ export const AuthProvider = ({ children }) => {
     setAuthToken(token);
     try {
       const payload = JSON.parse(atob(token.split(".")[1]));
-      setUser({ email: payload.sub, role: payload.role, token });
+      setUser({
+        id: payload.id,
+        email: payload.sub,
+        role: payload.role,
+        token,
+      });
+
+      console.log("AUTH USER:", {
+        id: payload.id,
+        email: payload.sub,
+        role: payload.role,
+      });
     } catch (err) {
       console.error("Invalid token on login:", err);
       setUser(null);
