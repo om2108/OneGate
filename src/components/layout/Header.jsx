@@ -1,5 +1,6 @@
 // src/components/layout/Header.jsx
 import React, { useContext, useEffect, useRef, useState } from "react";
+import { connectSocket, disconnectSocket } from "../../util/socket";
 import {
   Bars3Icon,
   MagnifyingGlassIcon,
@@ -11,7 +12,12 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import { getProfile } from "../../api/profile";
-import { getNotifications, markNotificationRead } from "../../api/notification";
+import {
+  getNotifications,
+  getNotificationCount,
+  markNotificationRead,
+  markAllNotificationsRead,
+} from "../../api/notification";
 
 import logo from "../../assets/logo.svg";
 import { motion } from "framer-motion";
@@ -30,6 +36,7 @@ export default function Header({ setSidebarOpen, onOpenProfileModal }) {
   const notifRef = useRef(null);
 
   const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // MOBILE SEARCH
   const [searchOpen, setSearchOpen] = useState(false);
@@ -63,36 +70,37 @@ export default function Header({ setSidebarOpen, onOpenProfileModal }) {
   /** -----------------------------------------------
    * LOAD NOTIFICATIONS (Polling + Event Listener)
    * --------------------------------------------- */
-  const fetchNotifications = async () => {
-    if (!user) return;
-
+  const loadNotifications = async () => {
     try {
-      const data = await getNotifications();
-      setNotifications(data || []);
+      const count = await getNotificationCount(); // already number
+      const list = await getNotifications(); // already array
+
+      setUnreadCount(count || 0);
+      setNotifications(Array.isArray(list) ? list : []);
     } catch (e) {
-      console.error("Notification load error", e);
+      console.error("Notification load failed", e);
     }
   };
 
-  // 1. Initial Load + Polling (Every 5 seconds)
-  // This allows the Owner to see requests without refreshing
   useEffect(() => {
-    if (!user) return;
+    const handler = () => loadNotifications();
 
-    fetchNotifications(); // first load
+    window.addEventListener("refreshNotifications", handler);
 
-    const timer = setInterval(fetchNotifications, 3000);
-
-    return () => clearInterval(timer);
-  }, [user]);
-
-  // 2. Listen for immediate local refresh (Tenant Side)
-  useEffect(() => {
-    window.addEventListener("refreshNotifications", fetchNotifications);
-
-    return () =>
-      window.removeEventListener("refreshNotifications", fetchNotifications);
+    return () => window.removeEventListener("refreshNotifications", handler);
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    loadNotifications();
+
+    connectSocket(user.id, () => {
+      loadNotifications();
+    });
+
+    return () => disconnectSocket();
+  }, [user?.id]);
 
   /** -----------------------------------------------
    * CLOSE ON OUTSIDE CLICK
@@ -136,10 +144,6 @@ export default function Header({ setSidebarOpen, onOpenProfileModal }) {
   const name = profile?.fullName || user?.name || user?.email;
   const initial = String(name?.[0] || "U").toUpperCase();
   const role = (profile?.role || user?.role || "").toLowerCase();
-
-  const unreadCount = notifications.filter(
-    (n) => n.readStatus === "UNREAD",
-  ).length;
 
   const formatDateTime = (dt) => (dt ? new Date(dt).toLocaleString() : "");
 
@@ -205,7 +209,7 @@ export default function Header({ setSidebarOpen, onOpenProfileModal }) {
                       if (!prev) setMenuOpen(false);
                       return !prev;
                     });
-                    fetchNotifications();
+                    loadNotifications();
                   }}
                 >
                   <BellIcon
@@ -236,56 +240,59 @@ export default function Header({ setSidebarOpen, onOpenProfileModal }) {
                       <p className="text-sm font-semibold text-gray-800">
                         Notifications
                       </p>
+
                       {unreadCount > 0 && (
-                        <span className="text-xs bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full font-medium">
-                          {unreadCount} New
-                        </span>
+                        <button
+                          onClick={async () => {
+                            await markAllNotificationsRead();
+
+                            setNotifications((prev) =>
+                              prev.map((n) => ({ ...n, readStatus: "READ" })),
+                            );
+
+                            setUnreadCount(0);
+                          }}
+                          className="text-xs text-blue-600"
+                        >
+                          Mark all read
+                        </button>
                       )}
                     </div>
 
                     {notifications.length === 0 ? (
                       <p className="p-4 text-center text-sm text-gray-500">
-                        No new notifications
+                        No notifications
                       </p>
                     ) : (
-                      notifications.map((n) => (
-                        <button
-                          key={n._id}
-                          className={`w-full text-left px-4 py-3 border-b hover:bg-gray-50 transition-colors ${
-                            n.readStatus === "UNREAD" ? "bg-blue-50/50" : ""
-                          }`}
-                          onClick={() => {
-                            markNotificationRead(n._id);
-                            setNotifications((prev) =>
-                              prev.map((x) =>
-                                x._id === n._id
-                                  ? { ...x, readStatus: "READ" }
-                                  : x,
-                              ),
-                            );
-                          }}
-                        >
-                          <div className="flex gap-3">
-                            <div
-                              className={`mt-1 h-2 w-2 rounded-full flex-shrink-0 ${
-                                n.readStatus === "UNREAD"
-                                  ? "bg-blue-600"
-                                  : "bg-transparent"
-                              }`}
-                            />
-                            <div>
-                              <p
-                                className={`text-sm ${n.readStatus === "UNREAD" ? "font-medium text-gray-900" : "text-gray-600"}`}
-                              >
-                                {n.message}
-                              </p>
-                              <p className="text-[11px] text-gray-400 mt-1">
-                                {formatDateTime(n.createdAt)}
-                              </p>
-                            </div>
-                          </div>
-                        </button>
-                      ))
+                      notifications.map((n) => {
+                        const nid = n.id || n._id;
+                        return (
+                          <button
+                            key={nid}
+                            className={`w-full text-left px-4 py-3 border-b hover:bg-gray-50 ${
+                              n.readStatus === "UNREAD" ? "bg-blue-50" : ""
+                            }`}
+                            onClick={async () => {
+                              await markNotificationRead(nid);
+
+                              setNotifications((prev) =>
+                                prev.map((x) =>
+                                  (x.id || x._id) === nid
+                                    ? { ...x, readStatus: "READ" }
+                                    : x,
+                                ),
+                              );
+
+                              setUnreadCount((c) => Math.max(c - 1, 0));
+                            }}
+                          >
+                            <p className="text-sm">{n.message}</p>
+                            <p className="text-[11px] text-gray-400 mt-1">
+                              {formatDateTime(n.createdAt)}
+                            </p>
+                          </button>
+                        );
+                      })
                     )}
                   </div>
                 )}
