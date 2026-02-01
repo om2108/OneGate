@@ -10,6 +10,7 @@ import {
   EyeIcon,
   BellIcon,
   CalendarDaysIcon,
+  CameraIcon,
 } from "@heroicons/react/24/outline";
 
 // links map (unchanged)
@@ -121,6 +122,11 @@ const linksMap = {
     name: "Resident Verification",
     path: "/dashboard/watchman/resident-verification",
     icon: UserGroupIcon,
+  },
+  {
+    name: "Image Verification",
+    path: "/dashboard/watchman/image-verification",
+    icon: CameraIcon,
   },
   {
     name: "Logs",

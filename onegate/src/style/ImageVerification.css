@@ -1,0 +1,224 @@
+/* ================================
+   GLOBAL RESET (IMPORTANT)
+================================ */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden; /* Disable browser scrollbar */
+  font-family: Arial, sans-serif;
+}
+
+/* ================================
+   MAIN CONTAINER
+================================ */
+.visitor-entry-container {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #ffffff;
+  overflow: hidden;
+}
+
+/* ================================
+   PHOTO CAPTURE AREA
+================================ */
+.photo-capture-area {
+  position: relative;
+  height: 260px;
+  flex-shrink: 0; /* Prevents shrinking */
+}
+
+.photo-placeholder {
+  height: 100%;
+  width: 100%;
+  background: #f0f0f0 url('placeholder-car.jpg') center/cover no-repeat;
+}
+
+.photo-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  padding-bottom: 20px;
+}
+
+.photo-action-button {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 4px solid #ffffff;
+  background-color: #2196F3;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.camera-inner {
+  width: 20px;
+  height: 20px;
+  background-color: white;
+  border-radius: 50%;
+}
+
+/* ================================
+   FORM CONTENT (SCROLLABLE)
+================================ */
+.form-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* Hide scrollbar but allow scroll */
+.form-content::-webkit-scrollbar {
+  width: 0;
+}
+
+/* ================================
+   FORM ELEMENTS
+================================ */
+.label {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 8px;
+  margin-top: 15px;
+  display: block;
+}
+
+.text-input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+.text-input::placeholder {
+  color: #aaa;
+}
+
+/* ================================
+   TAGS
+================================ */
+.tag-container {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.tag {
+  padding: 8px 15px;
+  border-radius: 20px;
+  font-size: 14px;
+  background-color: #E3F2FD;
+  color: #2196F3;
+  cursor: pointer;
+}
+
+/* ================================
+   CAPTURED PHOTO
+================================ */
+.captured-photo-section {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin: 20px 0;
+}
+
+.photo-thumbnail {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  background-color: #ddd;
+}
+
+.captured-photo-text {
+  font-size: 16px;
+}
+
+/* ================================
+   CONSENT
+================================ */
+.consent-checkbox {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  margin: 25px 0;
+}
+
+.consent-checkbox input {
+  width: 18px;
+  height: 18px;
+  margin-right: 10px;
+}
+
+/* ================================
+   BUTTONS
+================================ */
+.send-approval-button {
+  width: 100%;
+  padding: 15px;
+  font-size: 18px;
+  font-weight: bold;
+  border-radius: 8px;
+  border: none;
+  background-color: #2196F3;
+  color: white;
+  cursor: pointer;
+  margin-bottom: 15px;
+}
+
+.send-approval-button:hover {
+  background-color: #1E88E5;
+}
+
+.action-buttons-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.secondary-button {
+  flex: 1;
+  padding: 14px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.secondary-button:hover {
+  background-color: #f2f2f2;
+}
+
+.retake-button {
+  background-color: #f0f0f0;
+}
+
+/* ================================
+   BOTTOM NAVIGATION
+================================ */
+.bottom-navigation {
+  display: flex;
+  gap: 10px;
+  padding: 15px;
+  border-top: 1px solid #ddd;
+  flex-shrink: 0;
+}
+
+/* ================================
+   RESPONSIVE
+================================ */
+@media (max-width: 480px) {
+  .photo-capture-area {
+    height: 220px;
+  }
+}
