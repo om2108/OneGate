@@ -331,7 +331,6 @@ function AnimatedRoutes() {
              element={<PendingApprovals />} 
              />
              <Route path="approved-visitors" element={<ApprovedVisitors />} />
-
             <Route path="logs" element={<Logs />} />
           </Route>
 

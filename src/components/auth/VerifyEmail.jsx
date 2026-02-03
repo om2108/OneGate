@@ -93,9 +93,9 @@ export default function VerifyEmail() {
     // registration verification flow: call backend verify-otp (will mark verified)
     try {
       setSubmitting(true);
-      console.info("verify-otp payload ->", { email, code, purpose });
+
       const res = await verifyEmail(email, code, purpose); // uses your api helper
-      console.info("verify-otp response ->", res);
+
       setMessage(res?.message || "Verified successfully.");
       try { localStorage.removeItem("email"); } catch {}
       setTimeout(() => navigate("/login"), 700);
