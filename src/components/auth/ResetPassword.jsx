@@ -46,9 +46,7 @@ export default function ResetPassword() {
 
     try {
       setLoading(true);
-      console.info("reset-password payload ->", payload);
       const res = await resetPassword(payload);
-      console.info("reset-password response ->", res);
       setMsg("Password reset successfully — redirecting to login...");
       setType("success");
       setTimeout(() => navigate("/login"), 1000);
