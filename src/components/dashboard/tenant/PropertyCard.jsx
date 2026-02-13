@@ -7,7 +7,7 @@ const inr = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 0,
 });
 
-export default function PropertyCard({ property, onAction }) {
+export default function PropertyCard({ property, onAction, profileComplete }) {
   const {
     name,
     image,
@@ -101,13 +101,41 @@ export default function PropertyCard({ property, onAction }) {
           >
             View
           </button>
-          <button
-            onClick={() => onAction?.("request", property)}
-            className="px-3 py-2 rounded-lg border border-blue-600 bg-blue-600 text-white hover:bg-blue-700 transition text-sm"
-            aria-label={`Request ${name || "property"}`}
-          >
-            Request
-          </button>
+          <div className="relative group inline-block">
+  <button
+  disabled={!profileComplete}
+  onClick={() => {
+    if (!profileComplete) return;
+    onAction?.("request", property);
+  }}
+  className={`px-3 py-2 rounded-lg transition text-sm ${
+    profileComplete
+      ? "border border-blue-600 bg-blue-600 text-white hover:bg-blue-700"
+      : "border border-gray-300 bg-gray-300 text-gray-500 cursor-not-allowed"
+  }`}
+>
+  Request
+</button>
+
+
+  {!profileComplete && (
+    <div
+      className="
+        absolute bottom-full left-1/2 -translate-x-1/2 mb-2
+        bg-black text-white text-xs px-2 py-1 rounded
+        opacity-0 group-hover:opacity-100
+        transition-opacity duration-100
+        pointer-events-none
+        whitespace-nowrap
+      "
+    >
+      Complete profile before requesting property
+    </div>
+  )}
+</div>
+
+
+
         </div>
       </div>
     </article>
