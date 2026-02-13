@@ -15,6 +15,7 @@ import {
 } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import { AuthContext } from "../../context/AuthContext"; // ⬅️ NEW
+<<<<<<< HEAD
 import { validateAadhaar } from "../../util/aadhaarValidator";
 
 import { extractTextFromImage } from "../../util/ocr";
@@ -36,6 +37,11 @@ const calculateProfileCompletion = (profile, documents) => {
 
   return Math.round((completed / fields.length) * 100);
 };
+=======
+import { validateAadhaar } from "../../utils/aadhaarValidator";
+
+import { extractTextFromImage } from "../../utils/ocr";
+>>>>>>> 06613229a4458b299fd746fec27617ee6f4be0f5
 
 
 const backdropVariants = {
@@ -69,9 +75,12 @@ export default function ProfileModal({ isOpen, onClose }) {
     pan: "",
     passportPhoto: "",
   });
+<<<<<<< HEAD
   const completionPercent = calculateProfileCompletion(profile, documents);
 const isProfileComplete = completionPercent === 100;
 
+=======
+>>>>>>> 06613229a4458b299fd746fec27617ee6f4be0f5
 
   const fileInputRef = useRef(null);
   const firstInputRef = useRef(null);
@@ -80,6 +89,7 @@ const isProfileComplete = completionPercent === 100;
   const [userEmail, setUserEmail] = useState(""); // ⬅️ email from /users API
 
   // 🔑 helper: always send full PROFILE data (no email)
+<<<<<<< HEAD
  const buildPayload = (overrides = {}) => {
   return {
     fullName: overrides.fullName ?? profile?.fullName,
@@ -89,6 +99,20 @@ const isProfileComplete = completionPercent === 100;
     aadhaar: overrides.aadhaar ?? profile?.aadhaar,
     pan: overrides.pan ?? profile?.pan,
     passportPhoto: overrides.passportPhoto ?? profile?.passportPhoto,
+=======
+  const buildPayload = (overrides = {}) => {
+    const base = {
+      fullName: draft.fullName ?? profile?.fullName ?? "",
+      phone: draft.phone ?? profile?.phone ?? "",
+      address: draft.address ?? profile?.address ?? "",
+      image: profile?.image ?? "",
+      aadhaar: documents.aadhaar || profile?.aadhaar || "",
+      pan: documents.pan || profile?.pan || "",
+      passportPhoto: documents.passportPhoto || profile?.passportPhoto || "",
+    };
+
+    return { ...base, ...overrides };
+>>>>>>> 06613229a4458b299fd746fec27617ee6f4be0f5
   };
 };
 
@@ -263,10 +287,17 @@ const onDocumentPick = async (e, field) => {
     // OCR VALIDATION
     if (field === "aadhaar" || field === "pan") {
       const ocrResult = await extractTextFromImage(url);
+<<<<<<< HEAD
     
 
       if (!ocrResult || !ocrResult.text) {
         alert("Invalid Aadhaar document. Please upload a valid government-issued Aadhaar card");
+=======
+      console.log("OCR RESULT:", ocrResult);
+
+      if (!ocrResult || !ocrResult.text) {
+        alert("❌ Unable to read text, upload a clearer image");
+>>>>>>> 06613229a4458b299fd746fec27617ee6f4be0f5
         return;
       }
 
@@ -275,7 +306,11 @@ const onDocumentPick = async (e, field) => {
         const aadhaarMatch = ocrResult.text.match(/\b\d{4}\s?\d{4}\s?\d{4}\b/);
 
         if (!aadhaarMatch) {
+<<<<<<< HEAD
           alert("Invalid Aadhaar document. Aadhaar number not detected.");
+=======
+          alert("❌ Aadhaar number not detected. Upload a clearer picture.");
+>>>>>>> 06613229a4458b299fd746fec27617ee6f4be0f5
           return;
         }
 
@@ -284,7 +319,11 @@ const onDocumentPick = async (e, field) => {
 
         // CHECKSUM VALIDATION (fake detection)
         if (!validateAadhaar(aadhaarNumber)) {
+<<<<<<< HEAD
           alert("Invalid Aadhaar document. Verification failed.");
+=======
+          alert("❌ Invalid Aadhaar (checksum failed). Possibly fake or incorrect.");
+>>>>>>> 06613229a4458b299fd746fec27617ee6f4be0f5
           return;
         }
       }
@@ -294,7 +333,11 @@ const onDocumentPick = async (e, field) => {
         const panMatch = ocrResult.text.match(/[A-Z]{5}[0-9]{4}[A-Z]{1}/);
 
         if (!panMatch) {
+<<<<<<< HEAD
           alert("Invalid PAN document. PAN number format not detected.");
+=======
+          alert("❌ Invalid PAN format. Please upload a proper PAN card.");
+>>>>>>> 06613229a4458b299fd746fec27617ee6f4be0f5
           return;
         }
 
