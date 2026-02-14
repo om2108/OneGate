@@ -4,7 +4,8 @@ import { useNavigate, Link } from "react-router-dom";
 import { loginUser } from "../../api/auth";
 import { useAuth } from "../../context/AuthContext";
 import { setAuthToken } from "../../api/api";
-import bgImage from "../../assets/t.jpg";
+const bgImage =
+  "https://res.cloudinary.com/dopjyimaq/image/upload/f_auto,q_auto/v1771076809/t_dogf8x.jpg";
 
 export default function LoginForm() {
   const { setUser } = useAuth();

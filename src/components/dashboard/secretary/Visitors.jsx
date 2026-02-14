@@ -20,7 +20,7 @@ ChartJS.register(
   Legend,
   CategoryScale,
   LinearScale,
-  BarElement
+  BarElement,
 );
 
 export default function Visitors() {
@@ -93,7 +93,9 @@ export default function Visitors() {
 
         setVisitors(mapped);
       } catch (e) {
-        console.error("Failed to load visitors", e);
+        alert(
+          e?.response?.data?.message || e?.message || "Failed to load visitors",
+        );
         setErr("Failed to load visitors.");
         setVisitors([]);
       } finally {
@@ -129,19 +131,13 @@ export default function Visitors() {
 
   // 🔹 Stats
   const visitorsToday = useMemo(
-    () =>
-      visitors.filter(
-        (v) => toDateKey(v.rawCreatedAt) === todayKey
-      ).length,
-    [visitors, todayKey]
+    () => visitors.filter((v) => toDateKey(v.rawCreatedAt) === todayKey).length,
+    [visitors, todayKey],
   );
 
   const pendingCount = useMemo(
-    () =>
-      visitors.filter(
-        (v) => v.status.toLowerCase() === "pending"
-      ).length,
-    [visitors]
+    () => visitors.filter((v) => v.status.toLowerCase() === "pending").length,
+    [visitors],
   );
 
   const approvedCount = useMemo(
@@ -149,9 +145,9 @@ export default function Visitors() {
       visitors.filter(
         (v) =>
           v.status.toLowerCase() === "approved" ||
-          v.status.toLowerCase() === "in"
+          v.status.toLowerCase() === "in",
       ).length,
-    [visitors]
+    [visitors],
   );
 
   // static for now, or tie to complaints later
@@ -174,12 +170,7 @@ export default function Visitors() {
       labels: ["Delivery", "Guest", "Service", "Other"],
       datasets: [
         {
-          data: [
-            counts.Delivery,
-            counts.Guest,
-            counts.Service,
-            counts.Other,
-          ],
+          data: [counts.Delivery, counts.Guest, counts.Service, counts.Other],
           backgroundColor: ["#10b981", "#3b82f6", "#f97316", "#9ca3af"],
           borderWidth: 1,
         },
@@ -209,12 +200,15 @@ export default function Visitors() {
       await updateVisitorStatus(visitor.id, newStatus);
       setVisitors((prev) =>
         prev.map((v) =>
-          v.id === visitor.id ? { ...v, status: newStatus } : v
-        )
+          v.id === visitor.id ? { ...v, status: newStatus } : v,
+        ),
       );
     } catch (e) {
-      console.error("Failed to update visitor status", e);
-      alert("Failed to update visitor status. Please try again.");
+      alert(
+        e?.response?.data?.message ||
+          e?.message ||
+          "Failed to update visitor status",
+      );
     }
   };
 
@@ -252,9 +246,7 @@ export default function Visitors() {
           type="text"
           placeholder="Flat number"
           value={flatFilter === "All" ? "" : flatFilter}
-          onChange={(e) =>
-            setFlatFilter(e.target.value || "All")
-          }
+          onChange={(e) => setFlatFilter(e.target.value || "All")}
           className="border rounded-md p-2 text-sm"
         />
         <select
@@ -282,9 +274,7 @@ export default function Visitors() {
             className="bg-white shadow rounded-lg p-4 hover:shadow-md transition"
           >
             <p className="text-sm text-gray-500">{card.label}</p>
-            <p className="text-2xl font-semibold mt-2">
-              {card.value}
-            </p>
+            <p className="text-2xl font-semibold mt-2">{card.value}</p>
           </div>
         ))}
       </div>
@@ -292,9 +282,7 @@ export default function Visitors() {
       {/* Charts */}
       <div className="grid md:grid-cols-2 gap-6">
         <div className="bg-white p-4 rounded-lg shadow">
-          <h3 className="font-semibold mb-2 text-gray-700">
-            Visitor Types
-          </h3>
+          <h3 className="font-semibold mb-2 text-gray-700">Visitor Types</h3>
           <Doughnut
             data={visitorTypeData}
             options={{
@@ -383,8 +371,7 @@ export default function Visitors() {
         <div
           className="fixed inset-0 flex items-center justify-center bg-black/40 z-50"
           onClick={(e) =>
-            e.target === e.currentTarget &&
-            setSelectedVisitor(null)
+            e.target === e.currentTarget && setSelectedVisitor(null)
           }
         >
           <div className="bg-white rounded-lg shadow-lg p-6 w-[90%] max-w-md relative">
@@ -401,27 +388,22 @@ export default function Visitors() {
               <strong>Flat:</strong> {selectedVisitor.flat}
             </p>
             <p>
-              <strong>Visitor Type:</strong>{" "}
-              {selectedVisitor.type}
+              <strong>Visitor Type:</strong> {selectedVisitor.type}
             </p>
             <p>
               <strong>Status:</strong> {selectedVisitor.status}
             </p>
             <p>
-              <strong>Contact:</strong>{" "}
-              {selectedVisitor.contact || "—"}
+              <strong>Contact:</strong> {selectedVisitor.contact || "—"}
             </p>
             <p>
-              <strong>Email:</strong>{" "}
-              {selectedVisitor.email || "—"}
+              <strong>Email:</strong> {selectedVisitor.email || "—"}
             </p>
             <p>
-              <strong>Visit Purpose:</strong>{" "}
-              {selectedVisitor.purpose || "—"}
+              <strong>Visit Purpose:</strong> {selectedVisitor.purpose || "—"}
             </p>
             <p>
-              <strong>Visit Time:</strong>{" "}
-              {selectedVisitor.time || "—"}
+              <strong>Visit Time:</strong> {selectedVisitor.time || "—"}
             </p>
             <p>
               <strong>Remarks:</strong> No issues

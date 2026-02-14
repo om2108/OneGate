@@ -1,8 +1,18 @@
 // src/components/tenant/MemberProperties.jsx
-import React, { useEffect, useMemo, useState, useCallback, useContext } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+  useContext,
+} from "react";
 import PropertyCard from "../tenant/PropertyCard";
 import PropertyFilters from "../owner/PropertyCompo/PropertyFilters";
-import { getAllProperties, getRecommendations, recordPropertyClick } from "../../../api/property";
+import {
+  getAllProperties,
+  getRecommendations,
+  recordPropertyClick,
+} from "../../../api/property";
 import { requestAppointment, scoreAppointment } from "../../../api/appointment";
 import { AuthContext } from "../../../context/AuthContext";
 
@@ -59,17 +69,23 @@ export default function MemberProperties() {
 
       try {
         await recordPropertyClick(propertyId, user.token);
-        console.debug("Recorded property click", propertyId);
+        alert(`Recorded property click: ${propertyId}`);
       } catch (err) {
         const status = err?.response?.status;
         if (status === 401 || status === 403) {
-          console.debug("recordPropertyClick blocked (401/403) — ignoring for UX:", status, propertyId);
+          alert(
+            `recordPropertyClick blocked (${status}) for property ${propertyId}`,
+          );
           return;
         }
-        console.warn("recordPropertyClick failed:", err);
+        alert(
+          err?.response?.data?.message ||
+            err?.message ||
+            "Failed to record property click.",
+        );
       }
     },
-    [user?.token]
+    [user?.token],
   );
 
   useEffect(() => {
@@ -80,7 +96,11 @@ export default function MemberProperties() {
         if (!mounted) return;
         setProperties(Array.isArray(res) ? res : []);
       } catch (e) {
-        console.error("MemberProperties load:", e);
+        alert(
+          e?.response?.data?.message ||
+            e?.message ||
+            "Failed to load properties.",
+        );
       } finally {
         if (mounted) setLoading(false);
       }
@@ -95,7 +115,10 @@ export default function MemberProperties() {
       if (p.location) locations.add(p.location);
       if (p.type) types.add(p.type);
     });
-    return { locations: Array.from(locations).sort(), types: Array.from(types).sort() };
+    return {
+      locations: Array.from(locations).sort(),
+      types: Array.from(types).sort(),
+    };
   }, [properties]);
 
   const filtered = useMemo(() => {
@@ -124,7 +147,11 @@ export default function MemberProperties() {
         const data = await getRecommendations(body, user?.token);
         if (!cancelled) setRecs(Array.isArray(data) ? data : []);
       } catch (err) {
-        console.debug("rec error:", err);
+        alert(
+          err?.response?.data?.message ||
+            err?.message ||
+            "Recommendation fetch failed.",
+        );
         if (!cancelled) {
           setRecs([]);
           setRecError(err.message || String(err));
@@ -143,7 +170,7 @@ export default function MemberProperties() {
       // safe record
       await safeRecordClick(p.id || p._id);
     },
-    [safeRecordClick]
+    [safeRecordClick],
   );
 
   const openRequest = useCallback((p) => {
@@ -188,7 +215,13 @@ export default function MemberProperties() {
           const risk = formatRisk(scored?.noShowScore);
           if (risk) {
             setMsg(`✅ Request sent — ${risk.tone} ${risk.label}`);
-            setMsgColor(risk.label.includes("High") ? "text-red-700" : risk.label.includes("Medium") ? "text-amber-700" : "text-emerald-900");
+            setMsgColor(
+              risk.label.includes("High")
+                ? "text-red-700"
+                : risk.label.includes("Medium")
+                  ? "text-amber-700"
+                  : "text-emerald-900",
+            );
           } else {
             setMsg(`✅ Request sent. Score unavailable.`);
           }
@@ -196,13 +229,21 @@ export default function MemberProperties() {
           setMsg(`✅ Request sent. (no id returned for scoring)`);
         }
       } catch (scoreErr) {
-        console.warn("Scoring failed after request:", scoreErr);
+        alert(
+          scoreErr?.response?.data?.message ||
+            scoreErr?.message ||
+            "Scoring failed after request.",
+        );
         setMsg(`✅ Request sent. (scoring failed)`);
       }
 
       setTimeout(() => closeModal(), 900);
     } catch (err) {
-      console.error("request failed", err);
+      alert(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to send appointment request.",
+      );
       setMsg("⚠️ Failed to send request. Try again later.");
       setMsgColor("text-red-700");
     }
@@ -216,24 +257,36 @@ export default function MemberProperties() {
           <div className="text-sm text-gray-600">Member / Resident</div>
         </div>
 
-        <PropertyFilters filters={filters} setFilters={setFilters} filterOptions={filterOptions} />
+        <PropertyFilters
+          filters={filters}
+          setFilters={setFilters}
+          filterOptions={filterOptions}
+        />
 
         {/* Recommendations */}
         <div className="rounded-2xl border p-4">
           <h3 className="font-medium mb-3">Recommended for you</h3>
           {recLoading ? (
-            <div className="text-sm text-gray-500">Loading recommendations…</div>
+            <div className="text-sm text-gray-500">
+              Loading recommendations…
+            </div>
           ) : recError ? (
-            <div className="text-sm text-red-600">Recommendation error: {recError}</div>
+            <div className="text-sm text-red-600">
+              Recommendation error: {recError}
+            </div>
           ) : recs.length === 0 ? (
-            <div className="text-sm text-gray-500">No recommendations right now.</div>
+            <div className="text-sm text-gray-500">
+              No recommendations right now.
+            </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {recs.map((p) => (
                 <PropertyCard
                   key={p.id || p._id}
                   property={p}
-                  onAction={(action) => (action === "view" ? openView(p) : openRequest(p))}
+                  onAction={(action) =>
+                    action === "view" ? openView(p) : openRequest(p)
+                  }
                 />
               ))}
             </div>
@@ -251,7 +304,9 @@ export default function MemberProperties() {
                 <PropertyCard
                   key={p.id || p._id}
                   property={p}
-                  onAction={(action) => (action === "view" ? openView(p) : openRequest(p))}
+                  onAction={(action) =>
+                    action === "view" ? openView(p) : openRequest(p)
+                  }
                 />
               ))}
             </div>
@@ -263,46 +318,112 @@ export default function MemberProperties() {
           <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-3">
             <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b">
-                <h3 className="font-semibold">{mode === "view" ? selected.name : `Request: ${selected.name}`}</h3>
-                <button onClick={closeModal} className="px-2 py-1 rounded-md text-gray-600 hover:bg-gray-100">✕</button>
+                <h3 className="font-semibold">
+                  {mode === "view"
+                    ? selected.name
+                    : `Request: ${selected.name}`}
+                </h3>
+                <button
+                  onClick={closeModal}
+                  className="px-2 py-1 rounded-md text-gray-600 hover:bg-gray-100"
+                >
+                  ✕
+                </button>
               </div>
 
               <div className="p-4 sm:p-6">
                 {mode === "view" ? (
                   <>
-                    {selected.image && <img src={selected.image} alt={selected.name} className="w-full rounded-xl mb-3" />}
+                    {selected.image && (
+                      <img
+                        src={selected.image}
+                        alt={selected.name}
+                        className="w-full rounded-xl mb-3"
+                      />
+                    )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                      <p><span className="font-medium">Price:</span> {inr.format(Number(selected.price || 0))}</p>
-                      <p><span className="font-medium">Location:</span> {selected.location || "-"}</p>
-                      {selected.description && <p className="sm:col-span-2">{selected.description}</p>}
+                      <p>
+                        <span className="font-medium">Price:</span>{" "}
+                        {inr.format(Number(selected.price || 0))}
+                      </p>
+                      <p>
+                        <span className="font-medium">Location:</span>{" "}
+                        {selected.location || "-"}
+                      </p>
+                      {selected.description && (
+                        <p className="sm:col-span-2">{selected.description}</p>
+                      )}
                     </div>
                     <div className="mt-4 flex justify-end gap-2">
-                      <button onClick={() => setMode("request")} className="px-3 py-2 bg-blue-600 text-white rounded">Request Visit</button>
-                      <button onClick={closeModal} className="px-3 py-2 border rounded">Close</button>
+                      <button
+                        onClick={() => setMode("request")}
+                        className="px-3 py-2 bg-blue-600 text-white rounded"
+                      >
+                        Request Visit
+                      </button>
+                      <button
+                        onClick={closeModal}
+                        className="px-3 py-2 border rounded"
+                      >
+                        Close
+                      </button>
                     </div>
                   </>
                 ) : (
                   <form onSubmit={submitRequest} className="space-y-3">
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
-                        <label className="block text-sm text-gray-600 mb-1">Preferred date</label>
-                        <input type="date" value={reqDate} onChange={(e) => setReqDate(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-300" />
+                        <label className="block text-sm text-gray-600 mb-1">
+                          Preferred date
+                        </label>
+                        <input
+                          type="date"
+                          value={reqDate}
+                          onChange={(e) => setReqDate(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg border border-gray-300"
+                        />
                       </div>
                       <div>
-                        <label className="block text-sm text-gray-600 mb-1">Preferred time</label>
-                        <input type="time" value={reqTime} onChange={(e) => setReqTime(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-300" />
+                        <label className="block text-sm text-gray-600 mb-1">
+                          Preferred time
+                        </label>
+                        <input
+                          type="time"
+                          value={reqTime}
+                          onChange={(e) => setReqTime(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg border border-gray-300"
+                        />
                       </div>
                       <div>
-                        <label className="block text-sm text-gray-600 mb-1">Meet location</label>
-                        <input type="text" value={reqLocation} onChange={(e) => setReqLocation(e.target.value)} placeholder="On-site / Society gate" className="w-full px-3 py-2 rounded-lg border border-gray-300" />
+                        <label className="block text-sm text-gray-600 mb-1">
+                          Meet location
+                        </label>
+                        <input
+                          type="text"
+                          value={reqLocation}
+                          onChange={(e) => setReqLocation(e.target.value)}
+                          placeholder="On-site / Society gate"
+                          className="w-full px-3 py-2 rounded-lg border border-gray-300"
+                        />
                       </div>
                     </div>
 
                     {msg && <div className={`text-sm ${msgColor}`}>{msg}</div>}
 
                     <div className="flex justify-end gap-2">
-                      <button type="button" onClick={closeModal} className="px-3 py-2 border rounded">Cancel</button>
-                      <button type="submit" className="px-3 py-2 bg-blue-600 text-white rounded">Send Request</button>
+                      <button
+                        type="button"
+                        onClick={closeModal}
+                        className="px-3 py-2 border rounded"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-3 py-2 bg-blue-600 text-white rounded"
+                      >
+                        Send Request
+                      </button>
                     </div>
                   </form>
                 )}

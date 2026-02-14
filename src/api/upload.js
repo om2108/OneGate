@@ -21,13 +21,14 @@ export const uploadToCloudinary = async (file, onProgress) => {
     }
 
     return res.data.url;
-  } catch (error) {
-    console.error("Upload error:", {
-      status: error.response?.status,
-      data: error.response?.data,
-      url: error.config?.url,
-      method: error.config?.method,
-    });
-    throw error;
-  }
+ } catch (error) {
+  const msg =
+    error?.response?.data?.error ||
+    error?.response?.data?.message ||
+    error?.message ||
+    "Image upload failed";
+
+  alert(msg);
+  throw error;
+}
 };

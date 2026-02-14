@@ -11,14 +11,17 @@ export default function TenantPastRequests() {
         const res = await fetchRequests();
         const now = new Date();
 
-        const past =
-          Array.isArray(res)
-            ? res.filter((a) => a.dateTime && new Date(a.dateTime) < now)
-            : [];
+        const past = Array.isArray(res)
+          ? res.filter((a) => a.dateTime && new Date(a.dateTime) < now)
+          : [];
 
         setItems(past);
       } catch (e) {
-        console.error("Past requests load failed", e);
+        alert(
+          e?.response?.data?.message ||
+            e?.message ||
+            "Past requests load failed",
+        );
       } finally {
         setLoading(false);
       }
@@ -63,8 +66,8 @@ export default function TenantPastRequests() {
                 </p>
 
                 <p className="text-sm text-gray-500 mt-1">
-                  📅 {new Date(a.dateTime).toLocaleDateString()}{" "}
-                  ⏰ {new Date(a.dateTime).toLocaleTimeString([], {
+                  📅 {new Date(a.dateTime).toLocaleDateString()} ⏰{" "}
+                  {new Date(a.dateTime).toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
                   })}
@@ -77,7 +80,7 @@ export default function TenantPastRequests() {
 
               <span
                 className={`px-3 py-1 text-xs rounded-full font-medium ${badge(
-                  a.status
+                  a.status,
                 )}`}
               >
                 {a.status || "DONE"}

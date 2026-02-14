@@ -22,7 +22,7 @@ export const AuthProvider = ({ children }) => {
           token,
         });
       } catch (err) {
-        console.error("Invalid token:", err);
+        alert("Invalid or expired session. Please login again.");
         logout();
       }
     }
@@ -40,14 +40,8 @@ export const AuthProvider = ({ children }) => {
         role: payload.role,
         token,
       });
-
-      console.log("AUTH USER:", {
-        id: payload.id,
-        email: payload.sub,
-        role: payload.role,
-      });
     } catch (err) {
-      console.error("Invalid token on login:", err);
+      alert("Login failed. Invalid token.");
       setUser(null);
     }
   };

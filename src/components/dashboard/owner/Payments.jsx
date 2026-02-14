@@ -51,7 +51,6 @@ export default function PaymentsChart() {
       const rect = el.getBoundingClientRect();
       const w = Math.round(el.clientWidth || rect.width || 0);
       const h = Math.round(el.clientHeight || rect.height || 0);
-      console.debug("PaymentsChart measured:", { w, h, retries });
       return { w, h };
     };
 
@@ -80,7 +79,7 @@ export default function PaymentsChart() {
       if (check()) {
         clearInterval(id);
       } else if (retries >= maxRetries) {
-        console.warn("PaymentsChart: measurement retries exhausted — forcing ready");
+        alert("Chart layout measurement took too long. Forcing render.");
         setReady(true);
         clearInterval(id);
       }
@@ -95,7 +94,10 @@ export default function PaymentsChart() {
 
   if (!data.length) {
     return (
-      <div ref={containerRef} className="w-full h-full flex items-center justify-center">
+      <div
+        ref={containerRef}
+        className="w-full h-full flex items-center justify-center"
+      >
         Loading chart data...
       </div>
     );
