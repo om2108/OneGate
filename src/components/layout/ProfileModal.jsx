@@ -19,6 +19,21 @@ import { validateAadhaar } from "../../util/aadhaarValidator";
 
 import { extractTextFromImage } from "../../util/ocr";
 
+const calculateProfileCompletion = (profile, documents) => {
+  const fields = [
+    profile?.fullName,
+    profile?.phone,
+    profile?.address,
+    profile?.image,
+    documents?.aadhaar,
+    documents?.pan,
+    documents?.passportPhoto,
+  ];
+
+  const completed = fields.filter((f) => f && String(f).trim() !== "").length;
+
+  return Math.round((completed / fields.length) * 100);
+};
 
 const backdropVariants = {
   hidden: { opacity: 0 },
@@ -39,9 +54,8 @@ export default function ProfileModal({ isOpen, onClose }) {
 
   const [editing, setEditing] = useState({});
   const [draft, setDraft] = useState({});
-  
+
   const [savingField, setSavingField] = useState("");
-  
 
   const [preview, setPreview] = useState(null);
   const [uploadingFor, setUploadingFor] = useState("");
@@ -50,6 +64,8 @@ export default function ProfileModal({ isOpen, onClose }) {
     pan: "",
     passportPhoto: "",
   });
+  const completionPercent = calculateProfileCompletion(profile, documents);
+  const isProfileComplete = completionPercent === 100;
 
   const fileInputRef = useRef(null);
   const firstInputRef = useRef(null);
@@ -58,6 +74,7 @@ export default function ProfileModal({ isOpen, onClose }) {
   const [userEmail, setUserEmail] = useState(""); // ⬅️ email from /users API
 
   // 🔑 helper: always send full PROFILE data (no email)
+
   const buildPayload = (overrides = {}) => {
     const base = {
       fullName: draft.fullName ?? profile?.fullName ?? "",
@@ -116,11 +133,15 @@ export default function ProfileModal({ isOpen, onClose }) {
           address: safeProfile?.address || "",
         });
 
-        setUserEmail(userRes?.email || user?.email || ""); // ⬅️ email from users API or context
+        setUserEmail(userRes?.email || user?.email || "");
         setEditing({});
         setPreview(null);
       } catch (e) {
-        console.error("Failed to load profile or user", e);
+        alert(
+          e?.response?.data?.message ||
+            e?.message ||
+            "Could not save. Please try again.",
+        );
         if (mounted) setErr("Failed to load profile.");
       } finally {
         if (mounted) setLoading(false);
@@ -186,12 +207,24 @@ export default function ProfileModal({ isOpen, onClose }) {
 
       const payload = buildPayload({ [field]: newVal });
 
-      await updateProfile(payload);
-      setProfile((p) => ({ ...(p || {}), ...payload }));
+      const updated = await updateProfile(payload);
+
+      setProfile(updated);
+
+      // ✅ CRITICAL: sync draft with fresh DB values
+      setDraft({
+        fullName: updated.fullName || "",
+        phone: updated.phone || "",
+        address: updated.address || "",
+      });
+
       toggleEdit(field, false);
     } catch (e) {
-      console.error("Failed to save field", e);
-      alert("Could not save. Please try again.");
+      alert(
+        e?.response?.data?.message ||
+          e?.message ||
+          "Could not save. Please try again.",
+      );
     } finally {
       setSavingField("");
     }
@@ -199,104 +232,105 @@ export default function ProfileModal({ isOpen, onClose }) {
 
   // Avatar upload – also only profile fields
   const onAvatarPick = async (e) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  setUploadingAvatar(true);
+    setUploadingAvatar(true);
 
-  try {
-    const url = await uploadImage(file);
-    if (url) {
-      const payload = buildPayload({ image: url });
-      await updateProfile(payload);
-      setProfile((p) => ({ ...(p || {}), ...payload }));
+    try {
+      const url = await uploadImage(file);
+      if (url) {
+        const payload = buildPayload({ image: url });
+        const updated = await updateProfile(payload);
+        setProfile(updated);
+      }
+    } catch (err) {
+      alert(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to upload image.",
+      );
+    } finally {
+      setUploadingAvatar(false);
     }
-  } catch (err) {
-    console.error("Upload failed", err);
-    alert("Failed to upload image.");
-  } finally {
-    setUploadingAvatar(false);
-  }
-};
+  };
 
+  const onDocumentPick = async (e, field) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-
-const onDocumentPick = async (e, field) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-
-  if (!["image/jpeg", "image/jpg", "image/png"].includes(file.type)) {
-    alert("Only JPG, JPEG, PNG formats allowed");
-    return;
-  }
-
-  if (file.size > 2 * 1024 * 1024) {
-    alert("File must be less than 2MB");
-    return;
-  }
-
-  setUploadingFor(field);
-
-  try {
-    const url = await uploadImage(file);
-
-    // OCR VALIDATION
-    if (field === "aadhaar" || field === "pan") {
-      const ocrResult = await extractTextFromImage(url);
-      console.log("OCR RESULT:", ocrResult);
-
-      if (!ocrResult || !ocrResult.text) {
-        alert("❌ Unable to read text, upload a clearer image");
-        return;
-      }
-
-      // -------- Aadhaar Handling --------
-      if (field === "aadhaar") {
-        const aadhaarMatch = ocrResult.text.match(/\b\d{4}\s?\d{4}\s?\d{4}\b/);
-
-        if (!aadhaarMatch) {
-          alert("❌ Aadhaar number not detected. Upload a clearer picture.");
-          return;
-        }
-
-        const aadhaarNumber = aadhaarMatch[0].replace(/\s+/g, "");
-        console.log("🎯 Aadhaar:", aadhaarNumber);
-
-        // CHECKSUM VALIDATION (fake detection)
-        if (!validateAadhaar(aadhaarNumber)) {
-          alert("❌ Invalid Aadhaar (checksum failed). Possibly fake or incorrect.");
-          return;
-        }
-      }
-
-      // -------- PAN Handling --------
-      if (field === "pan") {
-        const panMatch = ocrResult.text.match(/[A-Z]{5}[0-9]{4}[A-Z]{1}/);
-
-        if (!panMatch) {
-          alert("❌ Invalid PAN format. Please upload a proper PAN card.");
-          return;
-        }
-
-        console.log("🎯 PAN:", panMatch[0]);
-      }
+    if (!["image/jpeg", "image/jpg", "image/png"].includes(file.type)) {
+      alert("Only JPG, JPEG, PNG formats allowed");
+      return;
     }
 
-    // SAVE VALID DOCUMENT IN DB
-    const payload = buildPayload({ [field]: url });
-    await updateProfile(payload);
-    setProfile((p) => ({ ...(p || {}), ...payload }));
-    setDocuments((d) => ({ ...d, [field]: url }));
+    if (file.size > 2 * 1024 * 1024) {
+      alert("File must be less than 2MB");
+      return;
+    }
 
-  } catch (err) {
-    console.error("Document upload failed", err);
-    alert("Failed to upload document");
-  } finally {
-    setUploadingFor("");
-  }
-};
+    setUploadingFor(field);
 
+    try {
+      const url = await uploadImage(file);
 
+      // OCR VALIDATION
+      if (field === "aadhaar" || field === "pan") {
+        const ocrResult = await extractTextFromImage(url);
+
+        if (!ocrResult || !ocrResult.text) {
+          alert("❌ Unable to read text, upload a clearer image");
+          return;
+        }
+
+        // -------- Aadhaar Handling --------
+        if (field === "aadhaar") {
+          const aadhaarMatch = ocrResult.text.match(
+            /\b\d{4}\s?\d{4}\s?\d{4}\b/,
+          );
+
+          if (!aadhaarMatch) {
+            alert("❌ Aadhaar number not detected. Upload a clearer picture.");
+            return;
+          }
+
+          const aadhaarNumber = aadhaarMatch[0].replace(/\s+/g, "");
+
+          // CHECKSUM VALIDATION (fake detection)
+          if (!validateAadhaar(aadhaarNumber)) {
+            alert(
+              "❌ Invalid Aadhaar (checksum failed). Possibly fake or incorrect.",
+            );
+            return;
+          }
+        }
+
+        // -------- PAN Handling --------
+        if (field === "pan") {
+          const panMatch = ocrResult.text.match(/[A-Z]{5}[0-9]{4}[A-Z]{1}/);
+
+          if (!panMatch) {
+            alert("❌ Invalid PAN format. Please upload a proper PAN card.");
+            return;
+          }
+        }
+      }
+
+      // SAVE VALID DOCUMENT IN DB
+      const payload = buildPayload({ [field]: url });
+      const updated = await updateProfile(payload);
+      setProfile(updated);
+      setDocuments((d) => ({ ...d, [field]: url }));
+    } catch (err) {
+      alert(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to upload document",
+      );
+    } finally {
+      setUploadingFor("");
+    }
+  };
 
   // Validation for Full Name, Phone, Address
   const validateField = (field, value) => {
@@ -406,11 +440,32 @@ const onDocumentPick = async (e, field) => {
               </div>
 
               {uploadingAvatar && (
-  <p className="mt-3 text-center text-xs text-blue-600 font-semibold">
-    Uploading photo… {Math.round(progress)}%
-  </p>
-)}
+                <p className="mt-3 text-center text-xs text-blue-600 font-semibold">
+                  Uploading photo… {Math.round(progress)}%
+                </p>
+              )}
+            </div>
+            {/* Profile Completion */}
+            <div className="mt-4">
+              <div className="flex justify-between text-xs text-gray-600 mb-1">
+                <span>Profile Completion</span>
+                <span>{completionPercent}%</span>
+              </div>
 
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full transition-all duration-500 ${
+                    completionPercent === 100 ? "bg-green-500" : "bg-blue-600"
+                  }`}
+                  style={{ width: `${completionPercent}%` }}
+                />
+              </div>
+
+              {completionPercent < 100 && (
+                <p className="mt-1 text-xs text-amber-600 font-medium">
+                  ⚠ Complete your profile to request property
+                </p>
+              )}
             </div>
 
             {/* Body */}

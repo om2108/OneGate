@@ -37,11 +37,17 @@ export default function PropertyDetailsModal({ property, onClose }) {
         const all = await getAllSocieties();
         if (!mounted) return;
         const found = Array.isArray(all)
-          ? all.find((x) => String(x._id || x.id) === String(property.societyId))
+          ? all.find(
+              (x) => String(x._id || x.id) === String(property.societyId),
+            )
           : null;
         setSociety(found || null);
       } catch (err) {
-        console.error("Failed to load society details:", err);
+        alert(
+          err?.response?.data?.message ||
+            err?.message ||
+            "Failed to load society details",
+        );
         if (!mounted) return;
         setSocietyErr("Could not load society details.");
         setSociety(null);
@@ -164,20 +170,32 @@ export default function PropertyDetailsModal({ property, onClose }) {
                 <strong>Society</strong>
                 <div className="mt-2">
                   {societyLoading ? (
-                    <div className="text-sm text-gray-500">Loading society details…</div>
+                    <div className="text-sm text-gray-500">
+                      Loading society details…
+                    </div>
                   ) : societyErr ? (
                     <div className="text-sm text-rose-600">{societyErr}</div>
                   ) : society ? (
                     <div className="text-sm text-gray-600 space-y-1">
-                      <div className="font-medium text-gray-800">{society.name}</div>
+                      <div className="font-medium text-gray-800">
+                        {society.name}
+                      </div>
                       {society.address && <div>{society.address}</div>}
-                      {society.contactPhone && <div>Phone: {society.contactPhone}</div>}
-                      {society.contactEmail && <div>Email: {society.contactEmail}</div>}
+                      {society.contactPhone && (
+                        <div>Phone: {society.contactPhone}</div>
+                      )}
+                      {society.contactEmail && (
+                        <div>Email: {society.contactEmail}</div>
+                      )}
                       {/* show additional fields if available */}
-                      {society.managerName && <div>Manager: {society.managerName}</div>}
+                      {society.managerName && (
+                        <div>Manager: {society.managerName}</div>
+                      )}
                     </div>
                   ) : (
-                    <div className="text-sm text-gray-500">No society information available.</div>
+                    <div className="text-sm text-gray-500">
+                      No society information available.
+                    </div>
                   )}
                 </div>
               </div>
@@ -185,7 +203,9 @@ export default function PropertyDetailsModal({ property, onClose }) {
               <div className="mb-2 text-gray-700">
                 <strong>Created</strong>
                 <div className="mt-1 text-sm text-gray-600">
-                  {property.createdAt ? new Date(property.createdAt).toLocaleString() : "—"}
+                  {property.createdAt
+                    ? new Date(property.createdAt).toLocaleString()
+                    : "—"}
                 </div>
               </div>
 

@@ -27,7 +27,11 @@ export default function AddPropertyModal({ onClose, onSuccess }) {
   const [newSociety, setNewSociety] = useState({ name: "", address: "" });
 
   // 🔗 cloudinary upload hook (same as profile)
-  const { uploadImage, uploading, progress: uploadProgress } = useCloudinaryUpload();
+  const {
+    uploadImage,
+    uploading,
+    progress: uploadProgress,
+  } = useCloudinaryUpload();
 
   // load societies
   useEffect(() => {
@@ -36,7 +40,11 @@ export default function AddPropertyModal({ onClose, onSuccess }) {
         const s = await getAllSocieties();
         setSocieties(s || []);
       } catch (err) {
-        console.error("Failed to load societies", err);
+        alert(
+          err?.response?.data?.message ||
+            err?.message ||
+            "Failed to load societies",
+        );
       }
     })();
   }, []);
@@ -67,36 +75,35 @@ export default function AddPropertyModal({ onClose, onSuccess }) {
 
   // upload file with size & type validation
   const handleFileSelect = async (e) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  // ✅ 1 MB limit
-  const maxSize = 1 * 1024 * 1024; // 1MB
-  if (file.size > maxSize) {
-    alert("Please select an image smaller than 1MB");
-    if (fileInputRef.current) fileInputRef.current.value = null;
-    return;
-  }
+    // ✅ 1 MB limit
+    const maxSize = 1 * 1024 * 1024; // 1MB
+    if (file.size > maxSize) {
+      alert("Please select an image smaller than 1MB");
+      if (fileInputRef.current) fileInputRef.current.value = null;
+      return;
+    }
 
-  // ✅ ensure it's actually an image
-  if (!file.type.startsWith("image/")) {
-    alert("Please select a valid image file");
-    if (fileInputRef.current) fileInputRef.current.value = null;
-    return;
-  }
+    // ✅ ensure it's actually an image
+    if (!file.type.startsWith("image/")) {
+      alert("Please select a valid image file");
+      if (fileInputRef.current) fileInputRef.current.value = null;
+      return;
+    }
 
-  setPreviewFile(URL.createObjectURL(file));
+    setPreviewFile(URL.createObjectURL(file));
 
-  const url = await uploadImage(file);
-  if (url) {
-    setForm((p) => ({ ...p, image: url }));
-  } else {
-    alert("Image upload failed.");
-    setPreviewFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = null;
-  }
-};
-
+    const url = await uploadImage(file);
+    if (url) {
+      setForm((p) => ({ ...p, image: url }));
+    } else {
+      alert("Image upload failed.");
+      setPreviewFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = null;
+    }
+  };
 
   const handleRemoveImage = () => {
     setForm((p) => ({ ...p, image: "" }));
@@ -117,8 +124,9 @@ export default function AddPropertyModal({ onClose, onSuccess }) {
       setAddingSociety(false);
       setNewSociety({ name: "", address: "" });
     } catch (err) {
-      console.error("Failed to add society:", err);
-      alert("Failed to add society. Try again.");
+      alert(
+        err?.response?.data?.message || err?.message || "Failed to add society",
+      );
     }
   };
 
@@ -128,7 +136,7 @@ export default function AddPropertyModal({ onClose, onSuccess }) {
       return alert(
         form.type === "Apartment"
           ? "Please enter flat or apartment number"
-          : "Please enter property name"
+          : "Please enter property name",
       );
     if (form.type === "Apartment" && !form.societyId)
       return alert("Please select a society for Apartment");
@@ -148,8 +156,11 @@ export default function AddPropertyModal({ onClose, onSuccess }) {
       onSuccess && onSuccess();
       onClose();
     } catch (err) {
-      console.error("Save failed", err);
-      alert("Failed to save property. Try again.");
+      alert(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to save property",
+      );
     } finally {
       setLoading(false);
     }
@@ -258,7 +269,11 @@ export default function AddPropertyModal({ onClose, onSuccess }) {
 
             {/* society (if apartment) */}
             {form.type === "Apartment" && (
-              <motion.div className="md:col-span-2" variants={formGroup} custom={3}>
+              <motion.div
+                className="md:col-span-2"
+                variants={formGroup}
+                custom={3}
+              >
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Select Society
                 </label>
@@ -304,7 +319,10 @@ export default function AddPropertyModal({ onClose, onSuccess }) {
                           placeholder="Society Name"
                           value={newSociety.name}
                           onChange={(e) =>
-                            setNewSociety({ ...newSociety, name: e.target.value })
+                            setNewSociety({
+                              ...newSociety,
+                              name: e.target.value,
+                            })
                           }
                           className="border rounded-md px-3 py-2"
                         />
@@ -344,7 +362,11 @@ export default function AddPropertyModal({ onClose, onSuccess }) {
             )}
 
             {/* location */}
-            <motion.div className="md:col-span-2" variants={formGroup} custom={4}>
+            <motion.div
+              className="md:col-span-2"
+              variants={formGroup}
+              custom={4}
+            >
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Location {form.type === "Apartment" && "(auto-filled)"}
               </label>

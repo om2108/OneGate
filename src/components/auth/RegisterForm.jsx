@@ -2,8 +2,8 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { registerUser } from "../../api/auth";
-import bgImage from "../../assets/t.jpg";
-
+const bgImage =
+  "https://res.cloudinary.com/dopjyimaq/image/upload/f_auto,q_auto/v1771076809/t_dogf8x.jpg";
 export default function RegisterForm() {
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [message, setMessage] = useState("");
@@ -25,7 +25,9 @@ export default function RegisterForm() {
       localStorage.setItem("email", form.email);
 
       // Navigate to verification with purpose=verify
-      navigate(`/verify?email=${encodeURIComponent(form.email)}&purpose=verify`);
+      navigate(
+        `/verify?email=${encodeURIComponent(form.email)}&purpose=verify`,
+      );
     } catch (err) {
       setMessage(err.response?.data?.error || "Registration failed");
     } finally {
@@ -44,9 +46,12 @@ export default function RegisterForm() {
 
       <div className="relative w-full max-w-md">
         <div className="bg-white/85 backdrop-blur-md rounded-2xl shadow-2xl ring-1 ring-black/5 p-6 sm:p-8">
-          <h1 className="text-3xl font-bold text-center text-gray-900">Create Account</h1>
+          <h1 className="text-3xl font-bold text-center text-gray-900">
+            Create Account
+          </h1>
           <p className="mt-1 text-center text-gray-600 text-sm">
-            Join <span className="font-semibold text-blue-600">OneGate</span> — your Society & Real Estate Portal
+            Join <span className="font-semibold text-blue-600">OneGate</span> —
+            your Society & Real Estate Portal
           </p>
 
           {message && (
@@ -63,7 +68,9 @@ export default function RegisterForm() {
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Full Name</label>
+              <label className="block text-sm font-medium text-gray-700">
+                Full Name
+              </label>
               <input
                 name="name"
                 value={form.name}
@@ -75,7 +82,9 @@ export default function RegisterForm() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Email Address</label>
+              <label className="block text-sm font-medium text-gray-700">
+                Email Address
+              </label>
               <input
                 name="email"
                 type="email"
@@ -88,7 +97,9 @@ export default function RegisterForm() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Password</label>
+              <label className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
               <div className="mt-1 relative">
                 <input
                   name="password"
@@ -108,7 +119,9 @@ export default function RegisterForm() {
                   {showPassword ? "Hide" : "Show"}
                 </button>
               </div>
-              <p className="mt-1 text-xs text-gray-500">Use at least 6 characters.</p>
+              <p className="mt-1 text-xs text-gray-500">
+                Use at least 6 characters.
+              </p>
             </div>
 
             <button
@@ -128,7 +141,12 @@ export default function RegisterForm() {
 
           <p className="mt-4 text-center text-gray-700">
             Already have an account?{" "}
-            <Link to="/login" className="font-semibold text-blue-600 hover:underline">Login</Link>
+            <Link
+              to="/login"
+              className="font-semibold text-blue-600 hover:underline"
+            >
+              Login
+            </Link>
           </p>
         </div>
       </div>

@@ -13,7 +13,7 @@ export default function useCloudinaryUpload() {
       const url = await uploadToCloudinary(file, (p) => setProgress(p));
       return url;
     } catch (err) {
-      console.error("Upload error:", err);
+      alert("Image upload failed. Please try again.");
       return null;
     } finally {
       setUploading(false);

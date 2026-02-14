@@ -1,6 +1,9 @@
-// src/pages/Contact.jsx
 import React, { useState } from "react";
-import { EnvelopeIcon, PhoneIcon, MapPinIcon } from "@heroicons/react/24/outline";
+import {
+  EnvelopeIcon,
+  PhoneIcon,
+  MapPinIcon,
+} from "@heroicons/react/24/outline";
 
 export default function Contact() {
   const [form, setForm] = useState({
@@ -18,8 +21,7 @@ export default function Contact() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Here you can call an API or send email later
-    console.log("Contact form submitted:", form);
+    alert("Message submitted successfully (demo)");
     setSubmitted(true);
     setForm({ name: "", email: "", subject: "", message: "" });
   };
@@ -41,7 +43,8 @@ export default function Contact() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-5">
           {submitted && (
             <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-              ✅ Your message has been recorded (demo). You can wire this to a real API later.
+              ✅ Your message has been recorded (demo). You can wire this to a
+              real API later.
             </div>
           )}
 
@@ -141,7 +144,8 @@ export default function Contact() {
             <div>
               <p className="font-medium text-gray-900">Office</p>
               <p>
-                OneGate Society Management<br />
+                OneGate Society Management
+                <br />
                 Pune, Maharashtra
               </p>
             </div>

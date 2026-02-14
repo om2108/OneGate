@@ -30,13 +30,21 @@ export default function Properties() {
         setPropertiesData(data);
 
         // 🔹 Extract unique filter values
-        const locations = [...new Set(data.map((p) => p.location).filter(Boolean))];
+        const locations = [
+          ...new Set(data.map((p) => p.location).filter(Boolean)),
+        ];
         const types = [...new Set(data.map((p) => p.type).filter(Boolean))];
-        const statuses = [...new Set(data.map((p) => p.status).filter(Boolean))];
+        const statuses = [
+          ...new Set(data.map((p) => p.status).filter(Boolean)),
+        ];
 
         setFilterOptions({ locations, types, statuses });
       } catch (err) {
-        console.error("Error fetching properties:", err);
+        alert(
+          err?.response?.data?.message ||
+            err?.message ||
+            "Failed to load properties.",
+        );
         setError("Failed to load properties. Please try again later.");
       } finally {
         setLoading(false);
@@ -54,8 +62,10 @@ export default function Properties() {
         p.location?.toLowerCase().includes(filters.location.toLowerCase());
       const matchesType = !filters.type || p.type === filters.type;
       const matchesStatus = !filters.status || p.status === filters.status;
-      const matchesMinPrice = !filters.minPrice || p.price >= Number(filters.minPrice);
-      const matchesMaxPrice = !filters.maxPrice || p.price <= Number(filters.maxPrice);
+      const matchesMinPrice =
+        !filters.minPrice || p.price >= Number(filters.minPrice);
+      const matchesMaxPrice =
+        !filters.maxPrice || p.price <= Number(filters.maxPrice);
 
       return (
         matchesLocation &&
@@ -76,7 +86,9 @@ export default function Properties() {
     );
 
   if (error)
-    return <div className="text-center text-red-500 font-medium mt-6">{error}</div>;
+    return (
+      <div className="text-center text-red-500 font-medium mt-6">{error}</div>
+    );
 
   if (!propertiesData.length)
     return (

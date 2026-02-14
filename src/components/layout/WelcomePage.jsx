@@ -2,8 +2,10 @@
 import React from "react";
 import { Link } from "react-router-dom";
 
-import bg from "../../assets/t.jpg";
-import logo from "../../assets/logo.svg";
+const logo =
+  "https://res.cloudinary.com/dopjyimaq/image/upload/f_auto,q_auto/v1771076067/encuusttipzand6nseyr.svg";
+const bg =
+  "https://res.cloudinary.com/dopjyimaq/image/upload/f_auto,q_auto/v1771076809/t_dogf8x.jpg";
 
 export default function WelcomePage({ siteName = "OneGate" }) {
   return (
@@ -16,7 +18,6 @@ export default function WelcomePage({ siteName = "OneGate" }) {
 
       {/* Center content */}
       <div className="relative z-10 flex flex-col items-center text-center gap-5 px-4">
-        
         {/* CLEAN LOGO BLOCK */}
         <div
           className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-white/15 backdrop-blur-sm 
@@ -41,7 +42,6 @@ export default function WelcomePage({ siteName = "OneGate" }) {
 
         {/* BUTTONS */}
         <nav className="mt-3 flex flex-col sm:flex-row gap-4">
-          
           {/* LOGIN */}
           <Link
             to="/login"
@@ -83,7 +83,9 @@ export default function WelcomePage({ siteName = "OneGate" }) {
       </div>
 
       {/* Diamond accent */}
-      <div className="absolute right-6 bottom-6 text-white/80 text-2xl select-none">◆</div>
+      <div className="absolute right-6 bottom-6 text-white/80 text-2xl select-none">
+        ◆
+      </div>
     </header>
   );
 }
