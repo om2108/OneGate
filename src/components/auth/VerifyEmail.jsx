@@ -2,8 +2,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { verifyEmail, resendOTP } from "../../api/auth"; // use your api helper
-import bgImage from "../../assets/t.jpg";
-
+const bgImage =
+  "https://res.cloudinary.com/dopjyimaq/image/upload/f_auto,q_auto/v1771076809/t_dogf8x.jpg";
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
   const queryEmail = searchParams.get("email") || null;
@@ -16,7 +16,10 @@ export default function VerifyEmail() {
   const inputsRef = useRef([]);
   const navigate = useNavigate();
 
-  const email = useMemo(() => queryEmail || localStorage.getItem("email") || "", [queryEmail]);
+  const email = useMemo(
+    () => queryEmail || localStorage.getItem("email") || "",
+    [queryEmail],
+  );
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -86,7 +89,9 @@ export default function VerifyEmail() {
     if (purpose === "reset") {
       // don't call verify-otp (backend deletes OTP). navigate to reset page and pass code in query
       // ResetPassword page will call POST /auth/reset-password with { email, code, password }
-      navigate(`/reset-password?email=${encodeURIComponent(email)}&code=${encodeURIComponent(code)}`);
+      navigate(
+        `/reset-password?email=${encodeURIComponent(email)}&code=${encodeURIComponent(code)}`,
+      );
       return;
     }
 
@@ -97,11 +102,16 @@ export default function VerifyEmail() {
       const res = await verifyEmail(email, code, purpose); // uses your api helper
 
       setMessage(res?.message || "Verified successfully.");
-      try { localStorage.removeItem("email"); } catch {}
+      try {
+        localStorage.removeItem("email");
+      } catch {}
       setTimeout(() => navigate("/login"), 700);
     } catch (err) {
-      console.error("verify-otp error ->", err);
-      setMessage(err?.response?.data?.error || err?.message || "Verification failed");
+      const serverMsg =
+        err?.response?.data?.error || err?.message || "Verification failed";
+
+      alert(serverMsg);
+      setMessage(serverMsg);
     } finally {
       setSubmitting(false);
     }
@@ -115,14 +125,23 @@ export default function VerifyEmail() {
       await resendOTP(email);
       setMessage("A new code has been sent to your email.");
     } catch (err) {
-      console.error("resend-otp error ->", err);
-      setMessage("Could not resend code. Please try again.");
+      const serverMsg =
+        err?.response?.data?.error ||
+        err?.message ||
+        "Could not resend code. Please try again.";
+
+      alert(serverMsg);
+      setMessage(serverMsg);
     }
   };
 
   return (
     <div className="relative min-h-screen grid place-items-center">
-      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url(${bgImage})` }} aria-hidden="true" />
+      <div
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: `url(${bgImage})` }}
+        aria-hidden="true"
+      />
       <div className="absolute inset-0 bg-gradient-to-tr from-black/40 via-black/25 to-transparent" />
 
       <div className="relative w-full max-w-md">
@@ -131,7 +150,8 @@ export default function VerifyEmail() {
             {purpose === "reset" ? "Enter reset code" : "Email verification"}
           </h1>
           <p className="mt-2 text-sm text-gray-700">
-            We sent a 6-digit code to <span className="font-semibold">{maskedEmail}</span>
+            We sent a 6-digit code to{" "}
+            <span className="font-semibold">{maskedEmail}</span>
           </p>
 
           {message && (
@@ -162,18 +182,28 @@ export default function VerifyEmail() {
               disabled={!isComplete || submitting}
               className="w-full rounded-lg bg-gradient-to-r from-blue-500 to-indigo-500 py-2.5 font-semibold text-white shadow-md hover:brightness-110 disabled:opacity-60"
             >
-              {submitting ? "Verifying..." : purpose === "reset" ? "Proceed to reset" : "Verify"}
+              {submitting
+                ? "Verifying..."
+                : purpose === "reset"
+                  ? "Proceed to reset"
+                  : "Verify"}
             </button>
           </form>
 
           <div className="mt-5 text-sm text-gray-700">
             Didn't get the code?{" "}
-            <button onClick={handleResend} disabled={cooldown > 0} className="font-semibold text-blue-600 hover:underline disabled:text-gray-400">
+            <button
+              onClick={handleResend}
+              disabled={cooldown > 0}
+              className="font-semibold text-blue-600 hover:underline disabled:text-gray-400"
+            >
               Resend {cooldown > 0 ? `in ${cooldown}s` : "code"}
             </button>
           </div>
 
-          <p className="mt-3 text-xs text-gray-600">Tip: check your Spam/Promotions folder.</p>
+          <p className="mt-3 text-xs text-gray-600">
+            Tip: check your Spam/Promotions folder.
+          </p>
         </div>
       </div>
     </div>

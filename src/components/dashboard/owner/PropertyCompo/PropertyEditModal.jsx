@@ -25,7 +25,11 @@ export default function PropertyEditModal({ property, onClose, onSuccess }) {
   const [previewFile, setPreviewFile] = useState(null);
 
   // ⛓ cloudinary upload hook
-  const { uploadImage, uploading, progress: uploadProgress } = useCloudinaryUpload();
+  const {
+    uploadImage,
+    uploading,
+    progress: uploadProgress,
+  } = useCloudinaryUpload();
 
   // load societies
   useEffect(() => {
@@ -34,7 +38,11 @@ export default function PropertyEditModal({ property, onClose, onSuccess }) {
         const res = await getAllSocieties();
         setSocieties(res || []);
       } catch (err) {
-        console.error("Failed to load societies", err);
+        alert(
+          err?.response?.data?.message ||
+            err?.message ||
+            "Failed to load societies",
+        );
       }
     })();
   }, []);
@@ -74,36 +82,35 @@ export default function PropertyEditModal({ property, onClose, onSuccess }) {
 
   // handle file upload with validation
   const handleFileSelect = async (e) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  // ✅ 1 MB limit
-  const maxSize = 1 * 1024 * 1024; // 1MB
-  if (file.size > maxSize) {
-    alert("Please select an image smaller than 1MB");
-    if (fileInputRef.current) fileInputRef.current.value = null;
-    return;
-  }
+    // ✅ 1 MB limit
+    const maxSize = 1 * 1024 * 1024; // 1MB
+    if (file.size > maxSize) {
+      alert("Please select an image smaller than 1MB");
+      if (fileInputRef.current) fileInputRef.current.value = null;
+      return;
+    }
 
-  // ✅ ensure it's actually an image
-  if (!file.type.startsWith("image/")) {
-    alert("Please select a valid image file");
-    if (fileInputRef.current) fileInputRef.current.value = null;
-    return;
-  }
+    // ✅ ensure it's actually an image
+    if (!file.type.startsWith("image/")) {
+      alert("Please select a valid image file");
+      if (fileInputRef.current) fileInputRef.current.value = null;
+      return;
+    }
 
-  setPreviewFile(URL.createObjectURL(file));
+    setPreviewFile(URL.createObjectURL(file));
 
-  const url = await uploadImage(file);
-  if (url) {
-    setForm((p) => ({ ...p, image: url }));
-  } else {
-    alert("Image upload failed.");
-    setPreviewFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = null;
-  }
-};
-
+    const url = await uploadImage(file);
+    if (url) {
+      setForm((p) => ({ ...p, image: url }));
+    } else {
+      alert("Image upload failed.");
+      setPreviewFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = null;
+    }
+  };
 
   const handleRemoveImage = () => {
     setForm((p) => ({ ...p, image: "" }));
@@ -117,7 +124,7 @@ export default function PropertyEditModal({ property, onClose, onSuccess }) {
       return alert(
         form.type === "Apartment"
           ? "Please enter flat or apartment number"
-          : "Please enter property name"
+          : "Please enter property name",
       );
     if (form.type === "Apartment" && !form.societyId)
       return alert("Please select a society for Apartment");
@@ -125,7 +132,6 @@ export default function PropertyEditModal({ property, onClose, onSuccess }) {
     const propertyId = property._id || property.id;
     if (!propertyId) {
       alert("Invalid property selected. Please refresh and try again.");
-      console.error("❌ Property ID missing:", property);
       return;
     }
 
@@ -138,8 +144,11 @@ export default function PropertyEditModal({ property, onClose, onSuccess }) {
       onSuccess && onSuccess();
       onClose();
     } catch (err) {
-      console.error("Update failed", err);
-      alert("Failed to update property.");
+      alert(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to update property",
+      );
     } finally {
       setLoading(false);
     }
@@ -236,7 +245,9 @@ export default function PropertyEditModal({ property, onClose, onSuccess }) {
                 </label>
                 <select
                   value={form.societyId}
-                  onChange={(e) => setForm({ ...form, societyId: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, societyId: e.target.value })
+                  }
                   className="w-full border rounded-md px-3 py-2"
                 >
                   <option value="">Select a society</option>

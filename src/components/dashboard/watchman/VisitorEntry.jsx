@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { User, Phone, MapPin, Car } from "lucide-react"; 
+import { User, Phone, MapPin, Car } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const VisitorEntry = () => {
@@ -22,9 +22,17 @@ const VisitorEntry = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Visitor Entry Submitted:", visitorData);
-    alert(`Entry recorded for ${visitorData.name} (Contact: ${visitorData.contactNumber})!`);
-    setVisitorData({ name: "", contactNumber: "", purpose: "", vehicleNumber: "" });
+
+    alert(
+      `Entry recorded for ${visitorData.name} (Contact: ${visitorData.contactNumber})!`,
+    );
+
+    setVisitorData({
+      name: "",
+      contactNumber: "",
+      purpose: "",
+      vehicleNumber: "",
+    });
   };
 
   return (
@@ -51,7 +59,8 @@ const VisitorEntry = () => {
           Visitor Information
         </h3>
         <p className="text-gray-400 text-sm mb-5">
-          Enter the details of the visitor below. All fields are required unless marked optional.
+          Enter the details of the visitor below. All fields are required unless
+          marked optional.
         </p>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
@@ -90,7 +99,8 @@ const VisitorEntry = () => {
           {/* Purpose of Visit */}
           <div className="flex flex-col">
             <label className="flex items-center font-medium text-gray-700 mb-2">
-              <MapPin className="text-sky-600 mr-2" size={18} /> Purpose of Visit
+              <MapPin className="text-sky-600 mr-2" size={18} /> Purpose of
+              Visit
             </label>
             <input
               type="text"
@@ -106,7 +116,8 @@ const VisitorEntry = () => {
           {/* Vehicle Number */}
           <div className="flex flex-col">
             <label className="flex items-center font-medium text-gray-700 mb-2">
-              <Car className="text-sky-600 mr-2" size={18} /> Vehicle Details (Optional)
+              <Car className="text-sky-600 mr-2" size={18} /> Vehicle Details
+              (Optional)
             </label>
             <input
               type="text"
