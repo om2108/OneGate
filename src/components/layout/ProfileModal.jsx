@@ -15,9 +15,33 @@ import {
 } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import { AuthContext } from "../../context/AuthContext"; // ⬅️ NEW
+<<<<<<< HEAD
 import { validateAadhaar } from "../../util/aadhaarValidator";
 
 import { extractTextFromImage } from "../../util/ocr";
+
+const calculateProfileCompletion = (profile, documents) => {
+  const fields = [
+    profile?.fullName,
+    profile?.phone,
+    profile?.address,
+    profile?.image,
+    documents?.aadhaar,
+    documents?.pan,
+    documents?.passportPhoto,
+  ];
+
+  const completed = fields.filter(
+    (f) => f && String(f).trim() !== ""
+  ).length;
+
+  return Math.round((completed / fields.length) * 100);
+};
+=======
+import { validateAadhaar } from "../../utils/aadhaarValidator";
+
+import { extractTextFromImage } from "../../utils/ocr";
+>>>>>>> 06613229a4458b299fd746fec27617ee6f4be0f5
 
 
 const backdropVariants = {
@@ -31,6 +55,7 @@ const modalVariants = {
 };
 
 export default function ProfileModal({ isOpen, onClose }) {
+  
   const { user } = useContext(AuthContext); // ⬅️ to know current user id
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -50,6 +75,12 @@ export default function ProfileModal({ isOpen, onClose }) {
     pan: "",
     passportPhoto: "",
   });
+<<<<<<< HEAD
+  const completionPercent = calculateProfileCompletion(profile, documents);
+const isProfileComplete = completionPercent === 100;
+
+=======
+>>>>>>> 06613229a4458b299fd746fec27617ee6f4be0f5
 
   const fileInputRef = useRef(null);
   const firstInputRef = useRef(null);
@@ -58,6 +89,17 @@ export default function ProfileModal({ isOpen, onClose }) {
   const [userEmail, setUserEmail] = useState(""); // ⬅️ email from /users API
 
   // 🔑 helper: always send full PROFILE data (no email)
+<<<<<<< HEAD
+ const buildPayload = (overrides = {}) => {
+  return {
+    fullName: overrides.fullName ?? profile?.fullName,
+    phone: overrides.phone ?? profile?.phone,
+    address: overrides.address ?? profile?.address,
+    image: overrides.image ?? profile?.image,
+    aadhaar: overrides.aadhaar ?? profile?.aadhaar,
+    pan: overrides.pan ?? profile?.pan,
+    passportPhoto: overrides.passportPhoto ?? profile?.passportPhoto,
+=======
   const buildPayload = (overrides = {}) => {
     const base = {
       fullName: draft.fullName ?? profile?.fullName ?? "",
@@ -70,7 +112,9 @@ export default function ProfileModal({ isOpen, onClose }) {
     };
 
     return { ...base, ...overrides };
+>>>>>>> 06613229a4458b299fd746fec27617ee6f4be0f5
   };
+};
 
   // Prevent background scroll when modal open
   useEffect(() => {
@@ -243,10 +287,17 @@ const onDocumentPick = async (e, field) => {
     // OCR VALIDATION
     if (field === "aadhaar" || field === "pan") {
       const ocrResult = await extractTextFromImage(url);
+<<<<<<< HEAD
+    
+
+      if (!ocrResult || !ocrResult.text) {
+        alert("Invalid Aadhaar document. Please upload a valid government-issued Aadhaar card");
+=======
       console.log("OCR RESULT:", ocrResult);
 
       if (!ocrResult || !ocrResult.text) {
         alert("❌ Unable to read text, upload a clearer image");
+>>>>>>> 06613229a4458b299fd746fec27617ee6f4be0f5
         return;
       }
 
@@ -255,7 +306,11 @@ const onDocumentPick = async (e, field) => {
         const aadhaarMatch = ocrResult.text.match(/\b\d{4}\s?\d{4}\s?\d{4}\b/);
 
         if (!aadhaarMatch) {
+<<<<<<< HEAD
+          alert("Invalid Aadhaar document. Aadhaar number not detected.");
+=======
           alert("❌ Aadhaar number not detected. Upload a clearer picture.");
+>>>>>>> 06613229a4458b299fd746fec27617ee6f4be0f5
           return;
         }
 
@@ -264,7 +319,11 @@ const onDocumentPick = async (e, field) => {
 
         // CHECKSUM VALIDATION (fake detection)
         if (!validateAadhaar(aadhaarNumber)) {
+<<<<<<< HEAD
+          alert("Invalid Aadhaar document. Verification failed.");
+=======
           alert("❌ Invalid Aadhaar (checksum failed). Possibly fake or incorrect.");
+>>>>>>> 06613229a4458b299fd746fec27617ee6f4be0f5
           return;
         }
       }
@@ -274,7 +333,11 @@ const onDocumentPick = async (e, field) => {
         const panMatch = ocrResult.text.match(/[A-Z]{5}[0-9]{4}[A-Z]{1}/);
 
         if (!panMatch) {
+<<<<<<< HEAD
+          alert("Invalid PAN document. PAN number format not detected.");
+=======
           alert("❌ Invalid PAN format. Please upload a proper PAN card.");
+>>>>>>> 06613229a4458b299fd746fec27617ee6f4be0f5
           return;
         }
 
@@ -412,6 +475,31 @@ const onDocumentPick = async (e, field) => {
 )}
 
             </div>
+            {/* Profile Completion */}
+<div className="mt-4">
+  <div className="flex justify-between text-xs text-gray-600 mb-1">
+    <span>Profile Completion</span>
+    <span>{completionPercent}%</span>
+  </div>
+
+  <div className="w-full bg-gray-200 rounded-full h-2">
+    <div
+      className={`h-2 rounded-full transition-all duration-500 ${
+        completionPercent === 100
+          ? "bg-green-500"
+          : "bg-blue-600"
+      }`}
+      style={{ width: `${completionPercent}%` }}
+    />
+  </div>
+
+  {completionPercent < 100 && (
+    <p className="mt-1 text-xs text-amber-600 font-medium">
+      ⚠ Complete your profile to request property
+    </p>
+  )}
+</div>
+
 
             {/* Body */}
             <div className="px-6 pb-6">

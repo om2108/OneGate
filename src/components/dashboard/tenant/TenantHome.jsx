@@ -6,6 +6,8 @@ import React, {
   useCallback,
   useContext,
 } from "react";
+import { getProfile } from "../../../api/profile";
+
 import PropertyCard from "../tenant/PropertyCard";
 import PropertyFilters from "../owner/PropertyCompo/PropertyFilters";
 import {
@@ -57,6 +59,7 @@ export default function TenantHome() {
     minPrice: "",
     maxPrice: "",
   });
+  const [profile, setProfile] = useState(null);
 
   // AI suggestion state
   const [aiPick, setAiPick] = useState(null);
@@ -68,10 +71,17 @@ export default function TenantHome() {
     let mounted = true;
     (async () => {
       try {
-        const [pRes, sRes] = await Promise.allSettled([
+        const [pRes, sRes, profileRes] = await Promise.allSettled([
           getAllProperties(),
           getAllSocieties(),
+          getProfile(),
         ]);
+
+        if (profileRes.status === "fulfilled") {
+          setProfile(profileRes.value);
+        }
+        await loadProfile();
+
         if (!mounted) return;
 
         setProperties(
@@ -172,31 +182,39 @@ export default function TenantHome() {
       if (timer) clearTimeout(timer);
     };
   }, [filters.location, filters.minPrice, filters.maxPrice, user?.token]);
+  const loadProfile = async () => {
+    try {
+      const data = await getProfile();
+      setProfile(data);
+      return data;
+    } catch (err) {
+      console.error("Failed to load profile", err);
+      return null;
+    }
+  };
 
   // handleAction: record property click but ignore 403/401 (not allowed)
   const handleAction = useCallback(
     async (action, property) => {
+      const latestProfile = await loadProfile();
+
+      if (action === "request" && !latestProfile?.profileComplete) {
+        alert("Complete your profile before requesting property");
+        return;
+      }
+
       setSelectedProperty(property);
       setPopupMode(action);
       setSuccessMessage("");
       setMsgColor("text-emerald-900");
 
-      // only attempt to record click if we have a token (authenticated client)
       if (!user?.token) return;
 
       try {
         await recordPropertyClick(property.id || property._id, user.token);
-        // optionally do something on success (no UI change needed)
       } catch (err) {
         const status = err?.response?.status;
-        if (status === 401 || status === 403) {
-          // Expected when token lacks required role — ignore, log debug info
-          console.debug(
-            "recordPropertyClick blocked (status):",
-            status,
-            err?.response?.data,
-          );
-        } else {
+        if (status !== 401 && status !== 403) {
           console.warn("recordPropertyClick failed:", err);
         }
       }
@@ -210,6 +228,11 @@ export default function TenantHome() {
 
   const handleSubmitRequest = async (e) => {
     e.preventDefault();
+    if (!profile?.profileComplete) {
+      alert("Complete your profile before sending request");
+      return;
+    }
+
     if (!selectedProperty) return;
 
     setSuccessMessage("");
@@ -304,6 +327,7 @@ export default function TenantHome() {
   const currentSociety = selectedProperty?.societyId
     ? societyById.get(selectedProperty.societyId)
     : null;
+  console.log("Profile complete value:", profile?.profileComplete);
 
   return (
     <section className="p-4 sm:p-6 lg:p-8">
@@ -356,6 +380,7 @@ export default function TenantHome() {
               key={p.id || p._id}
               property={p}
               onAction={handleAction}
+              profileComplete={profile?.profileComplete}
             />
           ))}
         </div>
