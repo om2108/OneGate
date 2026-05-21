@@ -30,11 +30,8 @@ function PropertyCard({ property, onUpdate }) {
       await deleteProperty(property._id || property.id);
       onUpdate && onUpdate();
     } catch (err) {
-      alert(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Failed to delete property.",
-      );
+      console.error("Delete failed:", err);
+      alert("Failed to delete property.");
     }
   };
 
@@ -46,12 +43,7 @@ function PropertyCard({ property, onUpdate }) {
         initial="hidden"
         animate="visible"
         whileHover="hover"
-        transition={{
-          type: "spring",
-          stiffness: 220,
-          damping: 20,
-          duration: 0.25,
-        }}
+        transition={{ type: "spring", stiffness: 220, damping: 20, duration: 0.25 }}
       >
         <motion.div
           className="overflow-hidden"
@@ -69,17 +61,11 @@ function PropertyCard({ property, onUpdate }) {
         </motion.div>
 
         <div className="p-4 flex flex-col gap-2">
-          <h4 className="text-lg font-semibold text-gray-800">
-            {property.name}
-          </h4>
+          <h4 className="text-lg font-semibold text-gray-800">{property.name}</h4>
 
           {/* kept Type & Status */}
-          <p className="text-gray-600 text-sm">
-            <strong>Type:</strong> {property.type}
-          </p>
-          <p className="text-gray-600 text-sm">
-            <strong>Status:</strong> {property.status}
-          </p>
+          <p className="text-gray-600 text-sm"><strong>Type:</strong> {property.type}</p>
+          <p className="text-gray-600 text-sm"><strong>Status:</strong> {property.status}</p>
 
           <div className="mt-3 flex flex-wrap gap-2">
             <motion.button

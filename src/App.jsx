@@ -75,15 +75,6 @@ const VisitorEntry = lazy(() =>
 const ResidentVerification = lazy(() =>
   import("./components/dashboard/watchman/ResidentVerification")
 );
-const ImageVerification = lazy(() =>
-  import("./components/dashboard/watchman/ImageVerification")
-);
-const PendingApprovals = lazy(() =>
-  import("./components/dashboard/watchman/PendingApprovals")
-);
-const ApprovedVisitors = lazy(() =>
-   import("./components/dashboard/watchman/ApprovedVisitors")
-);
 const Logs = lazy(() => import("./components/dashboard/watchman/Logs"));
 
 // MEMBER
@@ -322,15 +313,6 @@ function AnimatedRoutes() {
               path="resident-verification"
               element={<ResidentVerification />}
             />
-            <Route
-              path="image-verification"
-              element={<ImageVerification/>}
-            />
-            <Route 
-             path="pending-approvals" 
-             element={<PendingApprovals />} 
-             />
-             <Route path="approved-visitors" element={<ApprovedVisitors />} />
             <Route path="logs" element={<Logs />} />
           </Route>
 
