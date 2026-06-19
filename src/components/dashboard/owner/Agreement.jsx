@@ -1,111 +1,513 @@
-import React,{useEffect,useState} from "react";
+// src/components/dashboard/owner/TenantAgreementList.jsx
 
-export default function TenantAgreementList(){
+import React, { useEffect, useMemo, useState } from "react";
 
-const [tenants,setTenants]=useState([]);
-const [loading,setLoading]=useState(true);
-const [selected,setSelected]=useState(null);
+import { motion, AnimatePresence } from "framer-motion";
 
-// Mock data
-const mockTenants=[
-{ id:1,name:"Amit Sharma",property:"Sunrise Apartment 102",rent:"₹15,000",leaseStart:"2024-01-01",leaseEnd:"2024-12-31",approved:false},
-{ id:2,name:"Priya Patel",property:"GreenVille Villa 8B",rent:"₹25,000",leaseStart:"2024-03-15",leaseEnd:"2025-03-14",approved:false},
-{ id:3,name:"Rahul Mehta",property:"Silver Heights 5A",rent:"₹18,500",leaseStart:"2024-05-01",leaseEnd:"2025-04-30",approved:false}
-];
+import {
+  FileText,
+  CheckCircle,
+  Building,
+  Calendar,
+  Eye,
+  ShieldCheck,
+} from "lucide-react";
 
-useEffect(()=>{
-setTimeout(()=>{
-setTenants(mockTenants);
-setLoading(false);
-},800);
-},[]);
+export default function TenantAgreementList() {
+  const [tenants, setTenants] = useState([]);
 
-/* ---------- Approve Handler ---------- */
+  const [loading, setLoading] = useState(true);
 
-const approveTenant=(id)=>{
-setTenants(prev=>prev.map(t=>
-t.id===id?{...t,approved:true}:t
-));
-alert("Tenant agreement approved!");
-};
+  const [selected, setSelected] = useState(null);
 
-/* ----------------------------------- */
+  const mockTenants = [
+    {
+      id: 1,
+      name: "Amit Sharma",
+      property: "Sunrise Apartment 102",
+      rent: "₹15,000",
+      leaseStart: "2024-01-01",
+      leaseEnd: "2024-12-31",
+      approved: false,
+    },
 
-if(loading)
-return <p className="text-center text-gray-400 py-10">Loading tenants...</p>;
+    {
+      id: 2,
+      name: "Priya Patel",
+      property: "GreenVille Villa 8B",
+      rent: "₹25,000",
+      leaseStart: "2024-03-15",
+      leaseEnd: "2025-03-14",
+      approved: false,
+    },
 
-return(
-<div className="p-8 bg-slate-50 min-h-screen space-y-6">
+    {
+      id: 3,
+      name: "Rahul Mehta",
+      property: "Silver Heights 5A",
+      rent: "₹18,500",
+      leaseStart: "2024-05-01",
+      leaseEnd: "2025-04-30",
+      approved: false,
+    },
+  ];
 
-<h2 className="text-3xl font-semibold">Tenant Agreements</h2>
+  useEffect(() => {
+    setTimeout(() => {
+      setTenants(mockTenants);
 
-<div className="grid md:grid-cols-3 gap-6">
+      setLoading(false);
+    }, 700);
+  }, []);
 
-{tenants.map(t=>(
-<div key={t.id} className="bg-white rounded-xl shadow hover:shadow-lg transition p-5 space-y-3">
+  const approve = (id) => {
+    setTenants((prev) =>
+      prev.map((t) =>
+        t.id === id
+          ? {
+              ...t,
+              approved: true,
+            }
+          : t,
+      ),
+    );
+  };
 
-<div className="flex justify-between">
-<h3 className="font-semibold">{t.name}</h3>
+  const approved = useMemo(
+    () => tenants.filter((t) => t.approved).length,
 
-{t.approved&&(
-<span className="text-xs px-2 py-1 rounded bg-green-100 text-green-700">
-Approved
-</span>
-)}
+    [tenants],
+  );
 
-</div>
+  if (loading) {
+    return (
+      <div
+        className="
+min-h-screen
+p-8
+bg-gradient-to-br
+from-slate-50
+via-blue-50
+to-white
+"
+      >
+        <div
+          className="
+grid
+md:grid-cols-3
+gap-6
+"
+        >
+          {Array.from({
+            length: 3,
+          }).map((_, i) => (
+            <div
+              key={i}
+              className="
+h-72
+rounded-3xl
+bg-white
+animate-pulse
+"
+            ></div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
-<p className="text-sm text-gray-500">{t.property}</p>
-<p className="text-sm">Rent: {t.rent}</p>
-<p className="text-xs text-gray-400">
-Lease: {t.leaseStart} → {t.leaseEnd}
-</p>
+  return (
+    <div
+      className="
+min-h-screen
+bg-gradient-to-br
+from-slate-50
+via-blue-50
+to-white
+p-6
+"
+    >
+      {/* HEADER */}
 
-<div className="flex gap-2 pt-2">
+      <div
+        className="
+flex
+justify-between
+items-center
+mb-8
+"
+      >
+        <div>
+          <h1
+            className="
+text-3xl
+font-bold
+text-gray-900
+"
+          >
+            Tenant Agreements
+          </h1>
 
-<button
-onClick={()=>setSelected(t)}
-className="border px-3 py-1.5 rounded text-sm hover:bg-gray-50">
-View Agreement
-</button>
+          <p
+            className="
+text-gray-500
+"
+          >
+            Review and approve agreements
+          </p>
+        </div>
+      </div>
 
-<button
-disabled={t.approved}
-onClick={()=>approveTenant(t.id)}
-className={`px-3 py-1.5 rounded text-sm text-white
-${t.approved?"bg-gray-400":"bg-indigo-600 hover:bg-indigo-700"}`}>
-{t.approved?"Approved":"Approve"}
-</button>
+      {/* STATS */}
 
-</div>
+      <div
+        className="
+grid
+md:grid-cols-3
+gap-5
+mb-8
+"
+      >
+        <Card title="Total" value={tenants.length} icon={<FileText />} />
 
-</div>
-))}
+        <Card title="Approved" value={approved} icon={<ShieldCheck />} />
 
-</div>
+        <Card
+          title="Pending"
+          value={tenants.length - approved}
+          icon={<Calendar />}
+        />
+      </div>
 
-{/* Modal */}
-{selected&&(
-<div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      {/* GRID */}
 
-<div className="bg-white rounded-xl p-6 w-[380px] space-y-3">
+      <div
+        className="
+grid
+md:grid-cols-2
+xl:grid-cols-3
+gap-6
+"
+      >
+        {tenants.map((t) => (
+          <motion.div
+            key={t.id}
+            initial={{
+              opacity: 0,
+              y: 20,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            whileHover={{
+              y: -4,
+            }}
+            className="
+bg-white
+rounded-[32px]
+shadow-sm
+hover:shadow-xl
+transition
+overflow-hidden
+"
+          >
+            <div
+              className="
+bg-gradient-to-r
+from-blue-600
+to-indigo-600
+p-5
+text-white
+"
+            >
+              <div
+                className="
+flex
+justify-between
+"
+              >
+                <h3
+                  className="
+font-semibold
+text-lg
+"
+                >
+                  {t.name}
+                </h3>
 
-<h3 className="text-xl font-semibold">{selected.name}</h3>
+                {t.approved && <CheckCircle />}
+              </div>
+            </div>
 
-<p><strong>Property:</strong> {selected.property}</p>
-<p><strong>Rent:</strong> {selected.rent}</p>
-<p><strong>Lease:</strong> {selected.leaseStart} → {selected.leaseEnd}</p>
+            <div
+              className="
+p-6
+space-y-4
+"
+            >
+              <div
+                className="
+flex
+gap-3
+"
+              >
+                <Building size={18} />
 
-<div className="pt-4 flex justify-end">
-<button onClick={()=>setSelected(null)} className="border px-4 py-1.5 rounded">
-Close
-</button>
-</div>
+                <span>{t.property}</span>
+              </div>
 
-</div>
-</div>
-)}
+              <div>
+                <p
+                  className="
+text-sm
+text-gray-500
+"
+                >
+                  Rent
+                </p>
 
-</div>
-);
+                <p
+                  className="
+font-semibold
+"
+                >
+                  {t.rent}
+                </p>
+              </div>
+
+              <div>
+                <p
+                  className="
+text-sm
+text-gray-500
+"
+                >
+                  Lease
+                </p>
+
+                <p>
+                  {t.leaseStart}—{t.leaseEnd}
+                </p>
+              </div>
+
+              <div
+                className="
+flex
+gap-3
+pt-3
+"
+              >
+                <button
+                  onClick={() => setSelected(t)}
+                  className="
+flex-1
+rounded-2xl
+border
+py-3
+flex
+justify-center
+gap-2
+"
+                >
+                  <Eye size={18} />
+                  View
+                </button>
+
+                <button
+                  disabled={t.approved}
+                  onClick={() => approve(t.id)}
+                  className="
+
+flex-1
+
+rounded-2xl
+
+text-white
+
+bg-gradient-to-r
+
+from-blue-600
+
+to-indigo-600
+
+py-3
+
+disabled:bg-gray-400
+
+"
+                >
+                  {t.approved ? "Approved" : "Approve"}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* MODAL */}
+
+      <AnimatePresence>
+        {selected && (
+          <div
+            className="
+fixed
+inset-0
+bg-black/40
+backdrop-blur-sm
+grid
+place-items-center
+z-50
+p-4
+"
+          >
+            <motion.div
+              initial={{
+                opacity: 0,
+                scale: 0.92,
+              }}
+              animate={{
+                opacity: 1,
+                scale: 1,
+              }}
+              exit={{
+                opacity: 0,
+              }}
+              className="
+bg-white
+w-full
+max-w-lg
+rounded-[32px]
+overflow-hidden
+"
+            >
+              <div
+                className="
+bg-gradient-to-r
+from-blue-600
+to-indigo-600
+p-6
+text-white
+"
+              >
+                <h2
+                  className="
+text-2xl
+font-bold
+"
+                >
+                  Agreement Details
+                </h2>
+              </div>
+
+              <div
+                className="
+p-6
+space-y-4
+"
+              >
+                <Row title="Tenant" value={selected.name} />
+
+                <Row title="Property" value={selected.property} />
+
+                <Row title="Rent" value={selected.rent} />
+
+                <Row
+                  title="Lease"
+                  value={`${selected.leaseStart}
+→
+${selected.leaseEnd}`}
+                />
+
+                <div
+                  className="
+pt-5
+flex
+justify-end
+"
+                >
+                  <button
+                    onClick={() => setSelected(null)}
+                    className="
+px-6
+py-3
+rounded-2xl
+bg-blue-600
+text-white
+"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function Card({ title, value, icon }) {
+  return (
+    <div
+      className="
+bg-white
+rounded-[30px]
+shadow-sm
+p-6
+"
+    >
+      <div
+        className="
+flex
+justify-between
+"
+      >
+        <div>
+          <p
+            className="
+text-gray-500
+"
+          >
+            {title}
+          </p>
+
+          <h2
+            className="
+text-4xl
+font-bold
+"
+          >
+            {value}
+          </h2>
+        </div>
+
+        {icon}
+      </div>
+    </div>
+  );
+}
+
+function Row({ title, value }) {
+  return (
+    <div>
+      <p
+        className="
+text-sm
+text-gray-500
+"
+      >
+        {title}
+      </p>
+
+      <p
+        className="
+font-semibold
+"
+      >
+        {value}
+      </p>
+    </div>
+  );
 }

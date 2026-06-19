@@ -1,18 +1,63 @@
-// src/api/member.js
 import api from "./api";
 
-// All members for a society
-export const getMembers = async (societyId) =>
-  (await api.get("/members", { params: { societyId } })).data;
+export const getMembers = async (societyId) => {
+  const res = await api.get(
+    "/members",
+    {
+      params: {
+        societyId
+      }
+    }
+  );
 
-export const getMemberById = async (id) =>
-  (await api.get(`/members/${id}`)).data;
+  return res.data;
+};
 
-export const addMember = async (data) =>
-  (await api.post("/members", data)).data;
+export const getMemberByUserId =
+async (userId) => {
 
-export const updateMemberRole = async (id, role) =>
-  (await api.put(`/members/${id}/role`, null, { params: { role } })).data;
+  const res =
+    await api.get(
+      `/members/user/${userId}`
+    );
 
-export const deleteMember = async (id) =>
-  (await api.delete(`/members/${id}`)).data;
+  return res.data;
+};
+
+export const addMember =
+async (data) => {
+
+  const res =
+    await api.post(
+      "/members",
+      data
+    );
+
+  return res.data;
+};
+
+export const updateMemberRole =
+async (
+  id,
+  payload
+) => {
+
+  const res =
+    await api.put(
+      `/members/${id}/role`,
+      payload
+    );
+
+  return res.data;
+};
+
+export const deleteMember =
+async (id) => {
+
+  const res =
+    await api.delete(
+      `/members/${id}`
+    );
+
+  return res.data;
+};

@@ -1,21 +1,206 @@
 import api from "./api";
 
-export const getVisitors = async (societyId, userIds = []) =>
-  (await api.get("/visitors", {
-    params: { societyId, userIds },
-    paramsSerializer: params => {
-      const usp = new URLSearchParams();
-      usp.set("societyId", params.societyId);
-      (params.userIds || []).forEach(id => usp.append("userIds", id));
-      return usp.toString();
-    }
-  })).data;
+/*
+CREATE
+*/
 
-export const addVisitor = async data =>
-  (await api.post("/visitors", data)).data;
+export const addVisitor =
+(data)=>
 
-export const updateVisitorStatus = async (id, status) =>
-  (await api.put(`/visitors/${id}/status`, null, { params: { status } })).data;
+api.post(
+"/visitors",
+data
+);
 
-export const deleteVisitor = async id =>
-  (await api.delete(`/visitors/${id}`)).data;
+/*
+SECRETARY
+CREATE REGULAR
+*/
+
+export const createRegularVisitor =
+(data)=>
+
+api.post(
+"/visitors/regular",
+data
+);
+
+/*
+ALL VISITORS
+*/
+
+export const getVisitors =
+(
+societyId
+)=>
+
+api
+.get(
+"/visitors",
+{
+params:{
+societyId
+}
+}
+)
+
+.then(
+r=>r.data
+);
+
+/*
+SECRETARY
+PENDING
+*/
+
+export const getSecretaryVisitors =
+(
+societyId
+)=>
+
+api
+.get(
+"/visitors/secretary",
+{
+params:{
+societyId
+}
+}
+)
+
+.then(
+r=>r.data
+);
+
+/*
+APPROVE
+*/
+
+export const approveVisitor =
+(
+id
+)=>
+
+api.put(
+`/visitors/${id}/approve`
+);
+
+/*
+REJECT
+*/
+
+export const rejectVisitor =
+(
+id
+)=>
+
+api.put(
+`/visitors/${id}/reject`
+);
+
+/*
+SECRETARY UI
+COMPATIBLE
+*/
+
+export const updateVisitorStatus =
+(
+id,
+status
+)=>{
+
+if(
+status==="APPROVED"
+){
+
+return approveVisitor(
+id
+);
+
+}
+
+return rejectVisitor(
+id
+);
+
+};
+
+/*
+CHECK IN
+*/
+
+export const checkInVisitor =
+(
+id
+)=>
+
+api.put(
+`/visitors/${id}/checkin`
+);
+
+/*
+CHECK OUT
+*/
+
+export const checkOutVisitor =
+(
+id
+)=>
+
+api.put(
+`/visitors/${id}/checkout`
+);
+
+/*
+LOGS
+*/
+
+export const getVisitorLogs =
+(
+societyId
+)=>
+
+api
+.get(
+"/visitors",
+{
+params:{
+societyId
+}
+}
+)
+
+.then(
+r=>r.data
+);
+
+/*
+SINGLE
+*/
+
+export const getVisitor =
+(
+id
+)=>
+
+api
+.get(
+`/visitors/${id}`
+)
+
+.then(
+r=>r.data
+);
+
+/*
+DELETE
+*/
+
+export const deleteVisitor =
+(
+id
+)=>
+
+api.delete(
+`/visitors/${id}`
+);

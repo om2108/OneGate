@@ -1,113 +1,425 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft, RefreshCw, XCircle } from "lucide-react";
-import { getVisitors, deleteVisitor } from "../../../api/visitor";
+import React,{
+useEffect,
+useState
+}
+from "react";
 
-const ApprovalItem = ({ item, onCancel }) => {
+import {
+useNavigate
+}
+from "react-router-dom";
 
-  const handleResend = () => {
-    alert(`Resending request for ${item.visitorName}`);
-  };
+import {
+ArrowLeft,
+RefreshCw,
+Trash2,
+Eye
+}
+from "lucide-react";
 
-  return (
-    <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-sky-200 transition">
-      <div className="flex-1">
-        <div className="text-xs font-semibold text-sky-600 uppercase tracking-wider">
-          Visitor
-        </div>
-        <div className="text-lg font-bold text-gray-800">
-          {item.visitorName}
-        </div>
-      </div>
+import {
+getVisitors
+}
+from "../../../api/visitor";
 
-      <div className="flex flex-col items-start sm:items-end">
-        <span className="px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 uppercase">
-          {item.status}
-        </span>
-      </div>
+const Card=({
+item,
+refresh,
+cancel
+})=>(
 
-      <div className="flex gap-2 w-full sm:w-auto">
+<div className="
+bg-white
+rounded-3xl
+border
+p-5
+shadow-sm
+">
 
-        <button
-          onClick={handleResend}
-          className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-sky-50 text-sky-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-sky-100 transition"
-        >
-          <RefreshCw size={14} /> Resend
-        </button>
+<div className="
+flex
+justify-between
+gap-5
+">
 
-        <button
-          onClick={() => onCancel(item.id)}
-          className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-red-50 text-red-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-red-100 transition"
-        >
-          <XCircle size={14} /> Cancel
-        </button>
+<div>
 
-      </div>
-    </div>
-  );
+<h2 className="
+font-bold
+text-xl
+">
+
+{
+item.visitorName
+}
+
+</h2>
+
+<p className="
+text-sm
+text-gray-500
+">
+
+Flat:
+{
+item.flatNumber
+}
+
+</p>
+
+<p className="
+text-sm
+text-gray-500
+">
+
+Purpose:
+{
+item.purpose
+}
+
+</p>
+
+</div>
+
+<div>
+
+<span
+className="
+bg-yellow-100
+text-yellow-700
+px-3
+py-1
+rounded-full
+text-sm
+"
+>
+
+{
+item.status
+}
+
+</span>
+
+</div>
+
+</div>
+
+{
+
+item.imageUrl&&(
+
+<img
+src={
+item.imageUrl
+}
+alt=""
+className="
+mt-4
+rounded-2xl
+w-full
+h-60
+object-cover
+"
+/>
+
+)
+
+}
+
+<div className="
+flex
+gap-3
+mt-5
+">
+
+<button
+onClick={
+refresh
+}
+className="
+flex-1
+bg-blue-50
+text-blue-600
+py-3
+rounded-xl
+"
+>
+
+<RefreshCw
+size={18}
+/>
+
+</button>
+
+<button
+onClick={
+cancel
+}
+className="
+flex-1
+bg-red-50
+text-red-600
+py-3
+rounded-xl
+"
+>
+
+<Trash2
+size={18}
+/>
+
+</button>
+
+<button
+onClick={()=>
+window.open(
+item.imageUrl
+)
+}
+className="
+flex-1
+bg-gray-100
+py-3
+rounded-xl
+"
+>
+
+<Eye
+size={18}
+/>
+
+</button>
+
+</div>
+
+</div>
+
+);
+
+export default function PendingApprovals(){
+
+const navigate=
+useNavigate();
+
+const [
+list,
+setList
+]=
+useState([]);
+
+const [
+loading,
+setLoading
+]=
+useState(true);
+
+const societyId=
+localStorage.getItem(
+"secretarySocietyId"
+);
+
+const load=
+async()=>{
+
+try{
+
+setLoading(
+true
+);
+
+const res=
+await getVisitors(
+societyId
+);
+
+setList(
+
+res.filter(
+
+v=>
+
+v.status
+===
+"PENDING"
+
+)
+
+);
+
+}
+catch{
+
+alert(
+"Failed"
+);
+
+}
+finally{
+
+setLoading(
+false
+);
+
+}
+
 };
 
-const PendingApprovals = () => {
-  const navigate = useNavigate();
+useEffect(
+()=>{
+load();
+},
+[]
+);
 
-  const [pendingList, setPendingList] = useState([]);
+const cancel=
+(id)=>{
 
-  const societyId = "SOC001";
+setList(
+prev=>
 
-  useEffect(() => {
-    loadVisitors();
-  }, []);
+prev.filter(
+x=>
+x.id
+!==id
+)
 
-  const loadVisitors = async () => {
-    const data = await getVisitors(societyId);
-    setPendingList(data.filter(v => v.status === "PENDING"));
-  };
+);
 
-  const handleCancel = async (id) => {
-    await deleteVisitor(id);
-    loadVisitors();
-  };
-
-  return (
-    <div className="min-h-screen w-full bg-gray-50 px-4 py-6 flex justify-center">
-      <div className="w-full max-w-4xl">
-
-        <div className="flex items-center gap-4 mb-6">
-          <button
-            onClick={() => navigate("/dashboard/watchman/image-verification")}
-            className="p-2 hover:bg-gray-200 rounded-full transition text-gray-600 bg-white shadow-sm border border-gray-100"
-          >
-            <ArrowLeft size={24} />
-          </button>
-
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">Pending Approvals</h1>
-            <p className="text-gray-500 text-sm">
-              Review and manage active visitor requests
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-4">
-
-          {pendingList.length > 0 ? (
-            pendingList.map(item => (
-              <ApprovalItem
-                key={item.id}
-                item={item}
-                onCancel={handleCancel}
-              />
-            ))
-          ) : (
-            <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
-              <p className="text-gray-400">No pending approvals found.</p>
-            </div>
-          )}
-
-        </div>
-      </div>
-    </div>
-  );
 };
 
-export default PendingApprovals;
+return(
+
+<div className="
+min-h-screen
+bg-slate-100
+p-6
+">
+
+<div className="
+max-w-5xl
+mx-auto
+">
+
+<div className="
+flex
+items-center
+gap-4
+mb-6
+">
+
+<button
+onClick={()=>
+navigate(
+"/dashboard/watchman/image-verification"
+)
+}
+>
+
+<ArrowLeft/>
+
+</button>
+
+<div>
+
+<h1 className="
+text-3xl
+font-bold
+">
+
+Pending Approvals
+
+</h1>
+
+<p className="
+text-gray-500
+">
+
+Waiting for secretary
+
+</p>
+
+</div>
+
+</div>
+
+{
+
+loading
+
+?
+
+<div>
+
+Loading...
+
+</div>
+
+:
+
+<div
+className="
+space-y-5
+"
+>
+
+{
+
+list.length
+
+?
+
+list.map(
+item=>
+
+<Card
+
+key={
+item.id
+}
+
+item={
+item
+}
+
+refresh={
+load
+}
+
+cancel={()=>
+cancel(
+item.id
+)
+}
+
+/>
+
+)
+
+:
+
+<div
+className="
+bg-white
+rounded-3xl
+p-10
+text-center
+"
+>
+
+No pending visitors
+
+</div>
+
+}
+
+</div>
+
+}
+
+</div>
+
+</div>
+
+);
+
+}

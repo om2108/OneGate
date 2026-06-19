@@ -1,11 +1,23 @@
-import React, { useEffect, useMemo, useState } from "react";
+// ============================================
+// ResidentMaintenance.jsx
+// ============================================
+
+import React, {
+  useEffect,
+  useMemo,
+  useState
+} from "react";
 
 import {
-  Calendar,
+  Wallet,
   CreditCard,
-  Clock,
-  CheckCircle,
+  CheckCircle2,
+  Clock3,
   AlertTriangle,
+  CalendarDays,
+  Home,
+  Receipt,
+  BadgeIndianRupee,
 } from "lucide-react";
 
 import {
@@ -14,281 +26,528 @@ import {
   verifyPayment,
 } from "../../../api/maintenance";
 
-import { useAuth } from "../../../context/AuthContext";
+import {
+  getMemberByUserId
+} from "../../../api/member";
+
+import { useAuth }
+from "../../../context/AuthContext";
+
+import { jwtDecode }
+from "jwt-decode";
 
 export default function ResidentMaintenance() {
+
   const { user } = useAuth();
 
-  const [records, setRecords] = useState([]);
+  const [loading, setLoading] =
+    useState(true);
 
-  const [loading, setLoading] = useState(true);
+  const [records, setRecords] =
+    useState([]);
 
-  const [year, setYear] = useState(new Date().getFullYear());
+  const [member, setMember] =
+    useState(null);
+
+  const [payingId, setPayingId] =
+    useState("");
 
   useEffect(() => {
-    load();
-  }, []);
 
-  const load = async () => {
+    if(user?.token){
+
+      loadMaintenance();
+
+    }
+
+  }, [user]);
+
+  const loadMaintenance = async () => {
+
     try {
-      const data = await getMaintenance(user?.societyId);
 
-      const mine = (data || [])
+      setLoading(true);
 
-        .filter((x) => x.userId === (user?.id || user?._id))
+      // =====================================
+      // GET USER ID
+      // =====================================
 
-        .map((x) => {
-          const due = new Date(x.dueDate);
+      const decoded =
+        jwtDecode(user.token);
 
-          const now = new Date();
+      const userId =
+        decoded.id;
 
-          return {
-            ...x,
+      console.log(
+        "USER ID:",
+        userId
+      );
 
-            year: due.getFullYear(),
+      // =====================================
+      // GET MEMBER
+      // =====================================
 
-            month: due.toLocaleString("default", {
-              month: "long",
-            }),
+      const memberData =
+        await getMemberByUserId(
+          userId
+        );
 
-            autoStatus:
-              x.paymentStatus === "PAID"
-                ? "PAID"
-                : due < now
-                  ? "OVERDUE"
-                  : "PENDING",
-          };
-        });
+      console.log(
+        "MEMBER:",
+        memberData
+      );
 
-      setRecords(mine);
+      setMember(memberData);
+
+      const societyId =
+        memberData?.societyId;
+
+      console.log(
+        "SOCIETY ID:",
+        societyId
+      );
+
+      // =====================================
+      // GET MAINTENANCE
+      // =====================================
+
+      const data =
+        await getMaintenance(
+          societyId,
+          userId
+        );
+
+      console.log(
+        "MAINTENANCE:",
+        data
+      );
+
+      setRecords(
+        Array.isArray(data)
+          ? data
+          : []
+      );
+
+    } catch (err) {
+
+      console.error(
+        "LOAD MAINTENANCE ERROR:",
+        err
+      );
+
     } finally {
+
       setLoading(false);
     }
   };
 
-  const filtered = records.filter((x) => x.year === year);
+  // =====================================
+  // TOTAL
+  // =====================================
 
-  const paid = filtered.filter((x) => x.autoStatus === "PAID");
+  const totalAmount = useMemo(() => {
 
-  const pending = filtered.filter((x) => x.autoStatus !== "PAID");
+    return records.reduce(
 
-  const future = filtered.filter((x) => new Date(x.dueDate) > new Date());
+      (a, b) =>
 
-  const total = filtered.reduce(
-    (a, b) => a + (b.totalMaintenanceAmount || 0),
+        a + Number(
+          b.amount || 0
+        ),
 
-    0,
-  );
+      0
+    );
 
-  const pay = async (item) => {
+  }, [records]);
+
+  // =====================================
+  // PAID
+  // =====================================
+
+  const paidAmount = useMemo(() => {
+
+    return records
+
+      .filter(
+        (x) =>
+          x.paymentStatus === "PAID"
+      )
+
+      .reduce(
+
+        (a, b) =>
+
+          a + Number(
+            b.amount || 0
+          ),
+
+        0
+      );
+
+  }, [records]);
+
+  // =====================================
+  // PENDING
+  // =====================================
+
+  const pendingAmount =
+    totalAmount - paidAmount;
+
+  const pendingBills =
+    records.filter(
+      (x) =>
+        x.paymentStatus !== "PAID"
+    ).length;
+
+  // =====================================
+  // PAYMENT
+  // =====================================
+
+  const handlePayment = async (
+    item
+  ) => {
+
     try {
-      const order = await createOrder(item.id);
 
-      new window.Razorpay({
+      setPayingId(item.id);
+
+      const order =
+        await createOrder(item.id);
+
+      const options = {
+
         key: order.key,
 
-        amount: order.amount * 100,
+        amount: order.amount,
 
-        currency: "INR",
+        currency: order.currency,
+
+        name: "Society Maintenance",
+
+        description:
+          `Maintenance Payment - ${item.flatNumber}`,
 
         order_id: order.orderId,
 
-        name: "Maintenance",
+        handler: async (
+          response
+        ) => {
 
-        handler: async (r) => {
           await verifyPayment(
             item.id,
-
             {
-              paymentId: r.razorpay_payment_id,
+              paymentId:
+                response.razorpay_payment_id,
 
-              signature: r.razorpay_signature,
-            },
+              signature:
+                response.razorpay_signature,
+            }
           );
 
-          load();
+          await loadMaintenance();
+
+          alert(
+            "Payment Successful"
+          );
         },
-      }).open();
-    } catch {
+
+        prefill: {
+          name:
+            item.residentName,
+        },
+
+        theme: {
+          color: "#0f172a",
+        },
+      };
+
+      const razor =
+        new window.Razorpay(
+          options
+        );
+
+      razor.open();
+
+    } catch (err) {
+
+      console.error(err);
+
       alert("Payment Failed");
+
+    } finally {
+
+      setPayingId("");
     }
   };
 
+  if (loading) {
+
+    return (
+      <div className="p-6">
+        Loading...
+      </div>
+    );
+  }
+
   return (
-    <div
-      className="
-p-6
-bg-slate-100
-min-h-screen
-"
-    >
-      <div
-        className="
-flex
-justify-between
-mb-6
-"
-      >
-        <div>
-          <h1
-            className="
-text-3xl
-font-bold
-"
-          >
-            Maintenance
-          </h1>
 
-          <p
-            className="
-text-gray-500
-"
-          >
-            Yearly history
-          </p>
-        </div>
+    <div className="min-h-screen bg-slate-100 p-6 space-y-6">
 
-        <select
-          value={year}
-          onChange={(e) => setYear(Number(e.target.value))}
-          className="
-rounded-xl
-border
-px-4
-py-2
-"
-        >
-          {[2025, 2026, 2027].map((y) => (
-            <option key={y}>{y}</option>
-          ))}
-        </select>
+      <div>
+
+        <h1 className="text-3xl font-bold text-slate-800">
+          My Maintenance
+        </h1>
+
+        <p className="text-slate-500 mt-1">
+          Manage and pay your society maintenance
+        </p>
+
       </div>
 
-      <div
-        className="
-grid
-md:grid-cols-4
-gap-4
-mb-8
-"
-      >
-        <Card title="Total" value={`₹${total}`} />
+      {/* STATS */}
 
-        <Card title="Paid" value={paid.length} />
+      <div className="grid md:grid-cols-4 gap-5">
 
-        <Card title="Pending" value={pending.length} />
+        <StatCard
+          title="Total Amount"
+          value={`₹${totalAmount}`}
+          icon={<Wallet size={22} />}
+          color="bg-slate-900"
+        />
 
-        <Card title="Upcoming" value={future.length} />
+        <StatCard
+          title="Paid"
+          value={`₹${paidAmount}`}
+          icon={<CheckCircle2 size={22} />}
+          color="bg-green-600"
+        />
+
+        <StatCard
+          title="Pending"
+          value={`₹${pendingAmount}`}
+          icon={<Clock3 size={22} />}
+          color="bg-yellow-500"
+        />
+
+        <StatCard
+          title="Bills"
+          value={pendingBills}
+          icon={<Receipt size={22} />}
+          color="bg-red-500"
+        />
+
       </div>
 
-      <div
-        className="
-space-y-4
-"
-      >
-        {loading ? (
-          <div>Loading...</div>
+      {/* CONTENT */}
+
+      <div className="space-y-5">
+
+        {records.length === 0 ? (
+
+          <div className="bg-white rounded-3xl p-20 text-center text-slate-400 shadow-sm">
+
+            No maintenance found
+
+          </div>
+
         ) : (
-          filtered.map((item) => (
+
+          records.map((item) => (
+
             <div
               key={item.id}
-              className="
-bg-white
-rounded-3xl
-shadow
-p-6
-flex
-justify-between
-"
+              className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200"
             >
-              <div>
-                <h2
-                  className="
-font-bold
-"
-                >
-                  {item.month}
-                </h2>
 
-                <div>₹{item.totalMaintenanceAmount}</div>
+              <div className="flex flex-col lg:flex-row justify-between gap-6">
 
-                <div>
-                  Due:
-                  {item.dueDate}
-                </div>
-              </div>
+                {/* LEFT */}
 
-              <div>
-                {item.autoStatus === "PAID" ? (
-                  <div
-                    className="
-text-green-600
-"
-                  >
-                    <CheckCircle />
-                    PAID
-                  </div>
-                ) : (
-                  <>
-                    <div
-                      className="
-text-red-600
-mb-3
-"
-                    >
-                      {item.autoStatus}
+                <div className="flex-1 space-y-4">
+
+                  <div className="flex items-center gap-3">
+
+                    <div className="h-14 w-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center">
+
+                      <Home size={24} />
+
                     </div>
 
+                    <div>
+
+                      <h2 className="text-xl font-bold text-slate-800">
+
+                        {item.flatNumber}
+
+                      </h2>
+
+                      <p className="text-slate-500">
+
+                        {item.residentName}
+
+                      </p>
+
+                    </div>
+
+                  </div>
+
+                  <div className="grid md:grid-cols-3 gap-4">
+
+                    <InfoCard
+                      icon={<BadgeIndianRupee size={18} />}
+                      label="Amount"
+                      value={`₹${item.amount}`}
+                    />
+
+                    <InfoCard
+                      icon={<CalendarDays size={18} />}
+                      label="Due Date"
+                      value={item.dueDate}
+                    />
+
+                    <InfoCard
+                      icon={
+                        item.paymentStatus === "PAID"
+                          ? <CheckCircle2 size={18} />
+                          : <AlertTriangle size={18} />
+                      }
+                      label="Status"
+                      value={item.paymentStatus}
+                    />
+
+                  </div>
+
+                </div>
+
+                {/* RIGHT */}
+
+                <div className="flex flex-col justify-center items-start lg:items-end gap-4">
+
+                  <div
+                    className={`
+                      px-5
+                      py-2
+                      rounded-full
+                      text-sm
+                      font-semibold
+
+                      ${
+                        item.paymentStatus === "PAID"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-yellow-100 text-yellow-700"
+                      }
+                    `}
+                  >
+
+                    {item.paymentStatus}
+
+                  </div>
+
+                  {item.paymentStatus !== "PAID" && (
+
                     <button
-                      onClick={() => pay(item)}
-                      className="
-bg-black
-text-white
-px-5
-py-2
-rounded-xl
-"
+                      onClick={() => handlePayment(item)}
+                      disabled={payingId === item.id}
+                      className="bg-slate-900 hover:bg-black text-white px-6 py-3 rounded-2xl flex items-center gap-2 transition"
                     >
-                      <CreditCard />
-                      Pay
+
+                      <CreditCard size={18} />
+
+                      {
+                        payingId === item.id
+                          ? "Processing..."
+                          : "Pay Now"
+                      }
+
                     </button>
-                  </>
-                )}
+
+                  )}
+
+                </div>
+
               </div>
+
             </div>
+
           ))
         )}
+
       </div>
+
     </div>
   );
 }
 
-function Card({ title, value }) {
+// ============================================
+// STAT CARD
+// ============================================
+
+function StatCard({
+  title,
+  value,
+  icon,
+  color
+}) {
+
   return (
-    <div
-      className="
-bg-white
-rounded-3xl
-shadow
-p-5
-"
-    >
-      <div
-        className="
-text-gray-500
-"
-      >
-        {title}
+
+    <div className={`${color} rounded-3xl p-5 text-white shadow-sm`}>
+
+      <div className="flex justify-between items-center">
+
+        <div>
+
+          <p className="text-sm opacity-90">
+            {title}
+          </p>
+
+          <h2 className="text-3xl font-bold mt-2">
+            {value}
+          </h2>
+
+        </div>
+
+        <div className="bg-white/20 p-3 rounded-2xl">
+
+          {icon}
+
+        </div>
+
       </div>
 
-      <div
-        className="
-text-3xl
-font-bold
-"
-      >
-        {value}
+    </div>
+  );
+}
+
+// ============================================
+// INFO CARD
+// ============================================
+
+function InfoCard({
+  icon,
+  label,
+  value
+}) {
+
+  return (
+
+    <div className="border rounded-2xl p-4 bg-slate-50">
+
+      <div className="flex items-center gap-2 text-slate-500 text-sm">
+
+        {icon}
+
+        {label}
+
       </div>
+
+      <h3 className="font-semibold text-slate-800 mt-2">
+
+        {value}
+
+      </h3>
+
     </div>
   );
 }

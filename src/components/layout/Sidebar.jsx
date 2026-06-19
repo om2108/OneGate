@@ -15,19 +15,19 @@ import {
 // links map (unchanged)
 const linksMap = {
   USER: [
-  { name: "Dashboard", path: "/dashboard/user", icon: HomeIcon },
-  {
-    name: "Past Requests",
-    path: "/dashboard/user/past-requests",
-    icon: ClipboardDocumentListIcon,
-  },
-],
+    { name: "Dashboard", path: "/dashboard/user", icon: HomeIcon },
+    {
+      name: "Past Requests",
+      path: "/dashboard/user/past-requests",
+      icon: ClipboardDocumentListIcon,
+    },
+  ],
 
   MEMBER: [
     { name: "Dashboard", path: "/dashboard/member", icon: HomeIcon },
     {
-      name: "Maintenance",
-      path: "/dashboard/member/maintenance",
+      name: "ResidentMaintenance",
+      path: "/dashboard/member/ResidentMaintenance",
       icon: CreditCardIcon,
     },
     {
@@ -41,11 +41,11 @@ const linksMap = {
       icon: CalendarDaysIcon,
     },
     {
-      name: "Notices",                  
+      name: "Notices",
       path: "/dashboard/member/noticesm",
       icon: CalendarDaysIcon,
     },
-    { name: "Visitors", path: "/dashboard/member/visitors", icon: EyeIcon },
+    { name: "MyVisitors", path: "/dashboard/member/MyVisitors", icon: EyeIcon },
     {
       name: "Complaints",
       path: "/dashboard/member/complaints",
@@ -99,7 +99,16 @@ const linksMap = {
       path: "/dashboard/secretary/residents",
       icon: UserGroupIcon,
     },
-    { name: "Visitors", path: "/dashboard/secretary/visitors", icon: EyeIcon },
+    {
+      name: "AllMaintainance",
+      path: "/dashboard/secretary/AllMaintainance",
+      icon: CreditCardIcon,
+    },
+    {
+      name: "SecretaryVisitors",
+      path: "/dashboard/secretary/SecretaryVisitors",
+      icon: EyeIcon,
+    },
     {
       name: "Facilities",
       path: "/dashboard/secretary/facilities",
@@ -112,22 +121,29 @@ const linksMap = {
     },
   ],
   WATCHMAN: [
-  {
-    name: "Visitor Entry",
-    path: "/dashboard/watchman",
-    icon: EyeIcon,
-  },
-  {
-    name: "Resident Verification",
-    path: "/dashboard/watchman/resident-verification",
-    icon: UserGroupIcon,
-  },
-  {
-    name: "Logs",
-    path: "/dashboard/watchman/logs",
-    icon: ClipboardDocumentListIcon,
-  },
-],
+    {
+      name: "Visitor Entry",
+      path: "/dashboard/watchman",
+      icon: EyeIcon,
+    },
+    {
+      name: "Resident Verification",
+      path: "/dashboard/watchman/resident-verification",
+      icon: UserGroupIcon,
+    },
+    {
+      name: "Image Verification",
+
+      path: "/dashboard/watchman/image-verification",
+
+      icon: EyeIcon,
+    },
+    {
+      name: "Logs",
+      path: "/dashboard/watchman/logs",
+      icon: ClipboardDocumentListIcon,
+    },
+  ],
 };
 
 // motion variants (mobile)

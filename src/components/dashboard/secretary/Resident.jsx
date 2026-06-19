@@ -1,132 +1,316 @@
-import React,{useEffect,useMemo,useState} from "react";
-import {Doughnut} from "react-chartjs-2";
+import React, { useEffect, useMemo, useState } from "react";
+
 import {
-Chart as ChartJS,
-ArcElement,
-Tooltip,
-Legend
-} from "chart.js";
+  FiUsers,
+  FiHome,
+  FiUserCheck,
+  FiSearch,
+  FiMail,
+  FiPhone,
+} from "react-icons/fi";
 
-import {getMembers} from "../../../api/member";
+import { getMembers } from "../../../api/member";
 
-ChartJS.register(ArcElement,Tooltip,Legend);
+import { getAllProperties } from "../../../api/property";
 
-export default function Resident(){
+import { getProfileByUserId } from "../../../api/profile";
 
-const [residents,setResidents]=useState([]);
-const [search,setSearch]=useState("");
-const [selected,setSelected]=useState(null);
-const [loading,setLoading]=useState(true);
+import { getAllUsers } from "../../../api/user";
 
-useEffect(()=>{
-(async()=>{
-const societyId=localStorage.getItem("secretarySocietyId");
-if(!societyId) return;
+export default function Resident() {
+  const [residents, setResidents] = useState([]);
 
-const data=await getMembers(societyId);
+  const [search, setSearch] = useState("");
 
-setResidents((data||[]).map(m=>({
-id:m.id||m._id,
-name:m.fullName||m.email||"Resident",
-flat:m.flat||m.unit||"—",
-role:m.role||"Member",
-email:m.email||"",
-phone:m.phone||"",
-joined:m.joinedAt?.slice(0,10)
-})));
+  const [selected, setSelected] = useState(null);
 
-setLoading(false);
-})();
-},[]);
+  const [loading, setLoading] = useState(true);
 
-const list=useMemo(()=>residents.filter(r=>
-r.name.toLowerCase().includes(search.toLowerCase())||
-r.flat.toLowerCase().includes(search.toLowerCase())
-),[residents,search]);
+  useEffect(() => {
+    (async () => {
+      try {
+        const societyId = localStorage.getItem("secretarySocietyId");
 
-const owners=residents.filter(r=>r.role==="OWNER").length;
-const tenants=residents.filter(r=>r.role==="TENANT").length;
+        if (!societyId) return;
 
-const pie={
-labels:["Owners","Tenants"],
-datasets:[{data:[owners,tenants],backgroundColor:["#22c55e","#f97316"]}]
-};
+        // ✅ API calls
+        const membersData = await getMembers(societyId);
 
-return(
-<div className="p-8 bg-slate-50 min-h-screen space-y-6">
+        const usersData = await getAllUsers();
 
-<h2 className="text-3xl font-bold">Residents</h2>
+        const propertiesData = await getAllProperties();
 
-<input
-placeholder="Search resident..."
-className="border px-4 py-2 rounded-lg w-64"
-value={search}
-onChange={e=>setSearch(e.target.value)}
-/>
+        const profiles = await Promise.all(
+          (membersData || []).map(async (m) => {
+            try {
+              const res = await getProfileByUserId(m.userId);
+              return {
+                userId: m.userId,
+                ...res,
+              };
+            } catch {
+              return {
+                userId: m.userId,
+              };
+            }
+          }),
+        );
 
-<div className="grid md:grid-cols-4 gap-4">
-<Card title="Total Residents" value={residents.length}/>
-<Card title="Owners" value={owners}/>
-<Card title="Tenants" value={tenants}/>
-<Card title="Flats" value={new Set(residents.map(r=>r.flat)).size}/>
-</div>
+        // ✅ property map
+        const propertyMap = {};
 
-<div className="bg-white p-4 rounded-xl shadow w-72">
-<Doughnut data={pie}/>
-</div>
+        (propertiesData || []).forEach((p) => {
+          propertyMap[p.id || p._id] =
+            p.name || p.propertyNumber || "Unnamed Property";
+        });
 
-{/* Directory */}
+        // ✅ merge users + members
+        const formatted = (membersData || []).map((m) => {
+          const matchedUser = (usersData || []).find(
+            (u) => u.id === m.userId || u._id === m.userId,
+          );
 
-{loading?(
-<p className="text-gray-400">Loading residents...</p>
-):list.length===0?(
-<p className="text-gray-400">No residents found.</p>
-):(
-<div className="grid md:grid-cols-3 gap-6">
-{list.map(r=>(
-<div key={r.id} className="bg-white rounded-xl shadow p-4 hover:shadow-lg transition">
+          const profile = profiles.find((p) => p.userId === m.userId);
 
-<h3 className="font-semibold">{r.name}</h3>
-<p className="text-sm text-gray-500">{r.flat}</p>
-<p className="text-xs text-gray-400">{r.role}</p>
+          return {
+            id: m.id || m._id,
 
-<div className="flex gap-2 pt-3">
-<button onClick={()=>setSelected(r)} className="text-blue-600 text-sm">View</button>
-{r.phone&&<span>📞</span>}
-{r.email&&<span>📧</span>}
-</div>
+            name:
+              profile?.fullName ||
+              matchedUser?.name ||
+              matchedUser?.email?.split("@")[0] ||
+              "Resident",
 
-</div>
-))}
-</div>
-)}
+            flat: propertyMap[m.propertyId] || "Not Assigned",
 
-{/* Modal */}
-{selected&&(
-<div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-<div className="bg-white rounded-xl p-6 w-80 space-y-2">
+            role: matchedUser?.role || m.role || "MEMBER",
 
-<h3 className="font-semibold">{selected.name}</h3>
-<p>Flat: {selected.flat}</p>
-<p>Role: {selected.role}</p>
-<p>Email: {selected.email||"—"}</p>
-<p>Joined: {selected.joined||"—"}</p>
+            email: matchedUser?.email || "No Email",
 
-<button onClick={()=>setSelected(null)} className="mt-3 border px-3 py-1 rounded">
-Close
-</button>
+            phone:
+              profile?.phone ||
+              profile?.mobile ||
+              matchedUser?.phone ||
+              "Not Added",
 
-</div>
-</div>
-)}
+            joined: m.joinedAt?.slice(0, 10) || "—",
+          };
+        });
 
-</div>
-);
+        setResidents(formatted);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const list = useMemo(
+    () =>
+      residents.filter(
+        (r) =>
+          r.name?.toLowerCase().includes(search.toLowerCase()) ||
+          r.flat?.toLowerCase().includes(search.toLowerCase()),
+      ),
+    [residents, search],
+  );
+
+  return (
+    <div className="min-h-screen bg-slate-100 p-8 space-y-8">
+      {/* HEADER */}
+
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-bold text-slate-800">Residents</h1>
+
+          <p className="text-gray-500 mt-1">Society resident directory</p>
+        </div>
+
+        <div className="relative">
+          <FiSearch className="absolute left-3 top-3.5 text-gray-400" />
+
+          <input
+            placeholder="Search resident or property..."
+            className="pl-10 pr-4 py-3 rounded-2xl border border-slate-200 bg-white w-80 outline-none focus:ring-2 focus:ring-indigo-500"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* STATS */}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard
+          title="Total Residents"
+          value={residents.length}
+          icon={<FiUsers />}
+          color="bg-indigo-500"
+        />
+
+        <StatCard
+          title="Owners"
+          value={residents.filter((r) => r.role === "OWNER").length}
+          icon={<FiUserCheck />}
+          color="bg-green-500"
+        />
+
+        <StatCard
+          title="Members"
+          value={residents.filter((r) => r.role === "MEMBER").length}
+          icon={<FiUsers />}
+          color="bg-blue-500"
+        />
+
+        <StatCard
+          title="Properties"
+          value={new Set(residents.map((r) => r.flat)).size}
+          icon={<FiHome />}
+          color="bg-orange-500"
+        />
+      </div>
+
+      {/* LIST */}
+
+      {loading ? (
+        <div className="text-center py-20 text-gray-400">
+          Loading residents...
+        </div>
+      ) : list.length === 0 ? (
+        <div className="bg-white rounded-3xl shadow p-12 text-center text-gray-400">
+          No residents found.
+        </div>
+      ) : (
+        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {list.map((r) => (
+            <div
+              key={r.id}
+              className="bg-white rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 p-6 border border-slate-100"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="font-semibold text-xl text-slate-800">
+                    {r.name}
+                  </h3>
+
+                  <p className="text-sm text-gray-500 mt-1">{r.flat}</p>
+                </div>
+
+                <RoleBadge role={r.role} />
+              </div>
+
+              <div className="space-y-2 mt-5">
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <FiMail />
+                  <span>{r.email || "No email"}</span>
+                </div>
+
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <FiPhone />
+                  <span>{r.phone || "No phone"}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between mt-6">
+                <span className="text-xs text-gray-400">
+                  Joined: {r.joined || "—"}
+                </span>
+
+                <button
+                  onClick={() => setSelected(r)}
+                  className="px-4 py-2 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition text-sm font-medium"
+                >
+                  View
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* MODAL */}
+
+      {selected && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-5">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-slate-800">
+                Resident Details
+              </h2>
+
+              <RoleBadge role={selected.role} />
+            </div>
+
+            <div className="space-y-4">
+              <InfoRow label="Name" value={selected.name} />
+
+              <InfoRow label="Property" value={selected.flat} />
+
+              <InfoRow label="Email" value={selected.email || "—"} />
+
+              <InfoRow label="Phone" value={selected.phone || "—"} />
+
+              <InfoRow label="Joined" value={selected.joined || "—"} />
+            </div>
+
+            <div className="flex justify-end pt-3">
+              <button
+                onClick={() => setSelected(null)}
+                className="px-5 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
-const Card=({title,value})=>(
-<div className="bg-white p-4 rounded-xl shadow">
-<p className="text-xs text-gray-500">{title}</p>
-<p className="text-2xl font-bold">{value}</p>
-</div>
+const StatCard = ({ title, value, icon, color }) => (
+  <div className="bg-white rounded-3xl p-6 shadow-sm hover:shadow-lg transition">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm text-gray-400">{title}</p>
+
+        <h2 className="text-3xl font-bold text-slate-800 mt-2">{value}</h2>
+      </div>
+
+      <div className={`${color} text-white p-4 rounded-2xl text-2xl`}>
+        {icon}
+      </div>
+    </div>
+  </div>
+);
+
+const RoleBadge = ({ role }) => {
+  const styles = {
+    OWNER: "bg-green-100 text-green-700",
+
+    MEMBER: "bg-blue-100 text-blue-700",
+
+    WATCHMAN: "bg-orange-100 text-orange-700",
+
+    SECRETARY: "bg-purple-100 text-purple-700",
+  };
+
+  return (
+    <span
+      className={`text-xs px-3 py-1 rounded-full font-medium ${
+        styles[role] || "bg-slate-100 text-slate-600"
+      }`}
+    >
+      {role}
+    </span>
+  );
+};
+
+const InfoRow = ({ label, value }) => (
+  <div className="bg-slate-50 rounded-2xl px-4 py-3">
+    <p className="text-xs text-gray-400">{label}</p>
+
+    <p className="text-sm font-medium text-slate-800 mt-1">{value}</p>
+  </div>
 );
