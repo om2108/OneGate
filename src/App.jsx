@@ -27,95 +27,86 @@ const WelcomePage = lazy(() => import("./components/layout/WelcomePage"));
 // DASHBOARD LAYOUTS
 const UserLayout = lazy(() => import("./components/layout/UserLayout"));
 const MemberLayout = lazy(() => import("./components/layout/MemberLayout"));
-const SecretaryLayout = lazy(() =>
-  import("./components/layout/SecretaryLayout")
+const SecretaryLayout = lazy(
+  () => import("./components/layout/SecretaryLayout"),
 );
 const WatchmanLayout = lazy(() => import("./components/layout/WatchmanLayout"));
 const OwnerLayout = lazy(() => import("./components/layout/OwnerLayout"));
 
 // SECRETARY PAGES
-const SecretaryHome = lazy(() =>
-  import("./components/dashboard/secretary/SecretaryHome")
+const SecretaryHome = lazy(
+  () => import("./components/dashboard/secretary/SecretaryHome"),
 );
 const Notices = lazy(() => import("./components/dashboard/secretary/Notices"));
-const Complaints = lazy(() =>
-  import("./components/dashboard/secretary/Complaint")
+const Complaints = lazy(
+  () => import("./components/dashboard/secretary/Complaint"),
 );
-const Residents = lazy(() =>
-  import("./components/dashboard/secretary/Resident")
+const Residents = lazy(
+  () => import("./components/dashboard/secretary/Resident"),
 );
-const Visitors = lazy(() =>
-  import("./components/dashboard/secretary/Visitors")
+const SecretaryVisitors = lazy(
+  () => import("./components/dashboard/secretary/SecretaryVisitors"),
 );
-const Facilities = lazy(() =>
-  import("./components/dashboard/secretary/Facilities")
+const Facilities = lazy(
+  () => import("./components/dashboard/secretary/Facilities"),
 );
 const Reports = lazy(() => import("./components/dashboard/secretary/Reports"));
-const Attendance = lazy(() =>
-  import("./components/dashboard/secretary/Attendance")
+const Attendance = lazy(
+  () => import("./components/dashboard/secretary/Attendance"),
 );
-
-
+const AllMaintainance = lazy(
+  () => import("./components/dashboard/secretary/AllMaintainance"),
+);
 
 // OWNER PAGES
 const OwnerHome = lazy(() => import("./components/dashboard/owner/OwnerHome"));
-const Properties = lazy(() =>
-  import("./components/dashboard/owner/Properties")
+const Properties = lazy(
+  () => import("./components/dashboard/owner/Properties"),
 );
-const TenantRequests = lazy(() =>
-  import("./components/dashboard/owner/TenantRequests")
+const TenantRequests = lazy(
+  () => import("./components/dashboard/owner/TenantRequests"),
 );
 const Agreements = lazy(() => import("./components/dashboard/owner/Agreement"));
 const UsersList = lazy(() => import("./components/dashboard/owner/UsersList"));
 
 // WATCHMAN
-const VisitorEntry = lazy(() =>
-  import("./components/dashboard/watchman/VisitorEntry")
+const VisitorEntry = lazy(
+  () => import("./components/dashboard/watchman/VisitorEntry"),
 );
-const ResidentVerification = lazy(() =>
-  import("./components/dashboard/watchman/ResidentVerification")
-);
-const ImageVerification = lazy(() =>
-  import("./components/dashboard/watchman/ImageVerification")
-);
-const PendingApprovals = lazy(() =>
-  import("./components/dashboard/watchman/PendingApprovals")
-);
-const ApprovedVisitors = lazy(() =>
-   import("./components/dashboard/watchman/ApprovedVisitors")
+const ResidentVerification = lazy(
+  () => import("./components/dashboard/watchman/ResidentVerification"),
 );
 const Logs = lazy(() => import("./components/dashboard/watchman/Logs"));
+const ImageVerification = lazy(
+  () => import("./components/dashboard/watchman/ImageVerification"),
+);
 
 // MEMBER
-const MemberHome = lazy(() =>
-  import("./components/dashboard/member/MemberHome")
+const MemberHome = lazy(
+  () => import("./components/dashboard/member/MemberHome"),
 );
-const MemberProperties = lazy(() =>
-  import("./components/dashboard/member/MemberProperties")
+const MemberProperties = lazy(
+  () => import("./components/dashboard/member/MemberProperties"),
 );
-const Maintenance = lazy(() =>
-  import("./components/dashboard/member/Maintenance")
+const ResidentMaintenance = lazy(
+  () => import("./components/dashboard/member/ResidentMaintenance"),
 );
-const Services = lazy(() =>
-  import("./components/dashboard/member/Services")
+const Services = lazy(() => import("./components/dashboard/member/Services"));
+const Events = lazy(() => import("./components/dashboard/member/Events"));
+const MyVisitors = lazy(
+  () => import("./components/dashboard/member/MyVisitors"),
 );
-const Events = lazy(() =>
-  import("./components/dashboard/member/Events")
-);
-const VisitorsMember = lazy(() =>
-  import("./components/dashboard/member/Visitors")
-);
-const ComplaintsMember = lazy(() =>
-  import("./components/dashboard/member/Complaints")
+const ComplaintsMember = lazy(
+  () => import("./components/dashboard/member/Complaints"),
 );
 const NoticesM = lazy(() => import("./components/dashboard/member/Notices"));
 
 // TENANT USER
-const TenantHome = lazy(() =>
-  import("./components/dashboard/tenant/TenantHome")
+const TenantHome = lazy(
+  () => import("./components/dashboard/tenant/TenantHome"),
 );
-const TenantPastRequests = lazy(() =>
-  import("./components/dashboard/tenant/TenantPastRequests")
+const TenantPastRequests = lazy(
+  () => import("./components/dashboard/tenant/TenantPastRequests"),
 );
 
 const Unauthorized = lazy(() => import("./components/dashboard/Unauthorized"));
@@ -267,7 +258,8 @@ function AnimatedRoutes() {
             <Route path="notices" element={<Notices />} />
             <Route path="complaints" element={<Complaints />} />
             <Route path="residents" element={<Residents />} />
-            <Route path="visitors" element={<Visitors />} />
+            <Route path="SecretaryVisitors" element={<SecretaryVisitors />} />
+            <Route path="AllMaintainance" element={<AllMaintainance />} />
             <Route path="facilities" element={<Facilities />} />
             <Route path="reports" element={<Reports />} />
             <Route path="attendance" element={<Attendance />} />
@@ -300,11 +292,14 @@ function AnimatedRoutes() {
           >
             <Route index element={<MemberHome />} />
             <Route path="properties" element={<MemberProperties />} />
-            <Route path="maintenance" element={<Maintenance />} />
+            <Route
+              path="ResidentMaintenance"
+              element={<ResidentMaintenance />}
+            />
             <Route path="services" element={<Services />} />
             <Route path="noticesm" element={<NoticesM />} />
             <Route path="events" element={<Events />} />
-            <Route path="visitors" element={<VisitorsMember />} />
+            <Route path="MyVisitors" element={<MyVisitors />} />
             <Route path="complaints" element={<ComplaintsMember />} />
           </Route>
 
@@ -322,16 +317,8 @@ function AnimatedRoutes() {
               path="resident-verification"
               element={<ResidentVerification />}
             />
-            <Route
-              path="image-verification"
-              element={<ImageVerification/>}
-            />
-            <Route 
-             path="pending-approvals" 
-             element={<PendingApprovals />} 
-             />
-             <Route path="approved-visitors" element={<ApprovedVisitors />} />
             <Route path="logs" element={<Logs />} />
+            <Route path="image-verification" element={<ImageVerification />} />
           </Route>
 
           {/* TENANT / USER */}

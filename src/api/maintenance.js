@@ -1,14 +1,47 @@
-// // src/api/maintenance.js
-// import api from "./api";
+import api from "./api";
 
-// export const getMaintenanceRecords = async () =>
-//   (await api.get("/maintenance")).data;
+export const getMaintenance =
+async (
+  societyId,
+  userId = null
+) => {
 
-// export const addMaintenance = async (data) =>
-//   (await api.post("/maintenance", data)).data;
+  const res =
+    await api.get(
+      "/maintenance",
+      {
+        params: {
+          societyId,
+          userId
+        }
+      }
+    );
 
-// export const updateMaintenance = async (id, data) =>
-//   (await api.put(`/maintenance/${id}`, data)).data;
+  return res.data;
+};
 
-// export const deleteMaintenance = async (id) =>
-//   (await api.delete(`/maintenance/${id}`)).data;
+export const createOrder =
+async (id) => {
+
+  const res =
+    await api.post(
+      `/maintenance/${id}/create-order`
+    );
+
+  return res.data;
+};
+
+export const verifyPayment =
+async (
+  id,
+  data
+) => {
+
+  const res =
+    await api.post(
+      `/maintenance/${id}/verify`,
+      data
+    );
+
+  return res.data;
+};

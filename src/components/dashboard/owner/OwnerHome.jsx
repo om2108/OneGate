@@ -46,14 +46,10 @@ export default function OwnerHome() {
       try {
         sessionStorage.setItem("owner_properties", JSON.stringify(list));
       } catch (e) {
-        alert(e?.message || "Failed to cache properties");
+        console.warn("Failed to cache owner properties:", e);
       }
     } catch (e) {
-      alert(
-        e?.response?.data?.message ||
-          e?.message ||
-          "Failed to fetch properties",
-      );
+      console.error("Failed to fetch properties:", e);
       setErr("Could not load properties. Please try again.");
     } finally {
       if (showSpinner) setLoading(false);
@@ -74,7 +70,7 @@ export default function OwnerHome() {
         }
       }
     } catch (e) {
-      alert(e?.message || "Failed to read cached properties");
+      console.warn("Failed to read owner_properties cache:", e);
     }
 
     // If we had cache → refresh in background (no skeleton)
@@ -115,7 +111,7 @@ export default function OwnerHome() {
         break;
       default: // "created" — newest first if timestamps exist
         list.sort(
-          (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0),
+          (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
         );
     }
 

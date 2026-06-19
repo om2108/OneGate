@@ -1,3 +1,4 @@
+// src/context/AuthContext.jsx
 import { createContext, useContext, useEffect, useState } from "react";
 import { setAuthToken } from "../api/api";
 
@@ -7,84 +8,61 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isReady, setIsReady] = useState(false);
 
-  // ✅ Safe JWT decode
-  const decodeToken = (token) => {
-    try {
-      return JSON.parse(atob(token.split(".")[1]));
-    } catch {
-      return null;
-    }
-  };
-
-  // ✅ Expiry check
-  const isTokenExpired = (exp) => {
-    if (!exp) return true;
-    return Date.now() >= exp * 1000;
-  };
-
   useEffect(() => {
     const token = localStorage.getItem("token");
-
     if (token) {
-      const payload = decodeToken(token);
-
-      if (!payload || isTokenExpired(payload.exp)) {
-        localStorage.removeItem("token");
-        setAuthToken(null);
-        setUser(null);
-      } else {
+      try {
         setAuthToken(token);
+        const payload = JSON.parse(atob(token.split(".")[1]));
+
         setUser({
-          id: payload.id,
+          id: payload.id, // ⭐ ADD THIS
           email: payload.sub,
           role: payload.role,
           token,
         });
+      } catch (err) {
+        console.error("Invalid token:", err);
+        logout();
       }
     }
-
     setIsReady(true);
   }, []);
 
-  // ✅ LOGIN
   const login = (token) => {
-    const payload = decodeToken(token);
-
-    if (!payload || isTokenExpired(payload.exp)) {
-      alert("Session expired. Please login again.");
-      logout();
-      return;
-    }
-
     localStorage.setItem("token", token);
     setAuthToken(token);
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      setUser({
+        id: payload.id,
+        email: payload.sub,
+        role: payload.role,
+        token,
+      });
 
-    setUser({
-      id: payload.id,
-      email: payload.sub,
-      role: payload.role,
-      token,
-    });
+      console.log("AUTH USER:", {
+        id: payload.id,
+        email: payload.sub,
+        role: payload.role,
+      });
+    } catch (err) {
+      console.error("Invalid token on login:", err);
+      setUser(null);
+    }
   };
 
-  // ✅ LOGOUT
   const logout = () => {
     localStorage.removeItem("token");
     setAuthToken(null);
     setUser(null);
   };
 
-  if (!isReady) return null;
+  if (!isReady) return null; // or a spinner component
 
   return (
     <AuthContext.Provider
-      value={{
-        user,
-        setUser,
-        login,
-        logout,
-        isAuthenticated: !!user,
-      }}
+      value={{ user, setUser, login, logout, isAuthenticated: !!user }}
     >
       {children}
     </AuthContext.Provider>

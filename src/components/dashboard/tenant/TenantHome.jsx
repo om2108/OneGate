@@ -6,8 +6,6 @@ import React, {
   useCallback,
   useContext,
 } from "react";
-import { getProfile } from "../../../api/profile";
-
 import PropertyCard from "../tenant/PropertyCard";
 import PropertyFilters from "../owner/PropertyCompo/PropertyFilters";
 import {
@@ -59,7 +57,6 @@ export default function TenantHome() {
     minPrice: "",
     maxPrice: "",
   });
-  const [profile, setProfile] = useState(null);
 
   // AI suggestion state
   const [aiPick, setAiPick] = useState(null);
@@ -71,16 +68,10 @@ export default function TenantHome() {
     let mounted = true;
     (async () => {
       try {
-        const [pRes, sRes, profileRes] = await Promise.allSettled([
+        const [pRes, sRes] = await Promise.allSettled([
           getAllProperties(),
           getAllSocieties(),
-          getProfile(),
         ]);
-
-        if (profileRes.status === "fulfilled") {
-          setProfile(profileRes.value);
-        }
-
         if (!mounted) return;
 
         setProperties(
@@ -94,11 +85,7 @@ export default function TenantHome() {
             : [],
         );
       } catch (e) {
-        alert(
-          e?.response?.data?.message ||
-            e?.message ||
-            "Failed to load tenant data",
-        );
+        console.error("TenantHome load error:", e);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -168,11 +155,7 @@ export default function TenantHome() {
           setAiPick(Array.isArray(data) && data.length > 0 ? data[0] : null);
         }
       } catch (err) {
-        alert(
-          err?.response?.data?.message ||
-            err?.message ||
-            "AI recommendation failed",
-        );
+        console.debug("AI recommend error:", err);
         if (!cancelled) {
           setAiPick(null);
           const errMsg = err.message || String(err);
@@ -189,48 +172,36 @@ export default function TenantHome() {
       if (timer) clearTimeout(timer);
     };
   }, [filters.location, filters.minPrice, filters.maxPrice, user?.token]);
-  const loadProfile = async () => {
-    try {
-      const data = await getProfile();
-      setProfile(data);
-      return data;
-    } catch (err) {
-      alert(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Failed to load profile",
-      );
-      return null;
-    }
-  };
 
   // handleAction: record property click but ignore 403/401 (not allowed)
   const handleAction = useCallback(
     async (action, property) => {
-      const latestProfile = profile || (await loadProfile());
-
-      if (action === "request" && latestProfile?.profileComplete !== true) {
-        alert("Complete your profile before requesting property");
-        return;
-      }
-
       setSelectedProperty(property);
       setPopupMode(action);
       setSuccessMessage("");
       setMsgColor("text-emerald-900");
 
+      // only attempt to record click if we have a token (authenticated client)
       if (!user?.token) return;
 
       try {
         await recordPropertyClick(property.id || property._id, user.token);
+        // optionally do something on success (no UI change needed)
       } catch (err) {
         const status = err?.response?.status;
-        if (status !== 401 && status !== 403) {
-          alert("Tracking failed. Please retry.");
+        if (status === 401 || status === 403) {
+          // Expected when token lacks required role — ignore, log debug info
+          console.debug(
+            "recordPropertyClick blocked (status):",
+            status,
+            err?.response?.data,
+          );
+        } else {
+          console.warn("recordPropertyClick failed:", err);
         }
       }
     },
-    [user?.token, profile],
+    [user?.token],
   );
 
   const closePopup = () => {
@@ -239,11 +210,6 @@ export default function TenantHome() {
 
   const handleSubmitRequest = async (e) => {
     e.preventDefault();
-    if (profile?.profileComplete !== true) {
-      alert("Complete your profile before sending request");
-      return;
-    }
-
     if (!selectedProperty) return;
 
     setSuccessMessage("");
@@ -294,11 +260,7 @@ export default function TenantHome() {
           );
         }
       } catch (scoreErr) {
-        alert(
-          scoreErr?.response?.data?.message ||
-            scoreErr?.message ||
-            "Risk scoring failed",
-        );
+        console.warn("Scoring failed after request:", scoreErr);
         setSuccessMessage(
           `✅ Request sent for "${selectedProperty.name}". (scoring failed)`,
         );
@@ -310,14 +272,8 @@ export default function TenantHome() {
       setReqTime("");
       setReqLocation("");
     } catch (err) {
-      alert(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Failed to send request",
-      );
-
+      console.error("request failed", err);
       setSuccessMessage("⚠️ Failed to send request. Please try again.");
-
       setMsgColor("text-red-700");
       setPopupMode("");
     }
@@ -400,7 +356,6 @@ export default function TenantHome() {
               key={p.id || p._id}
               property={p}
               onAction={handleAction}
-              profileComplete={profile?.profileComplete}
             />
           ))}
         </div>

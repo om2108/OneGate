@@ -48,9 +48,37 @@ booked:facilities.filter(x=>x.status==="Booked").length
 };
 
 return(
-<div className="min-h-screen bg-[#f8fafc] p-10 space-y-10">
 
-<h1 className="text-3xl font-semibold">Facilities</h1>
+<div className="
+min-h-screen
+bg-gradient-to-br
+from-slate-50
+via-blue-50
+to-white
+p-8
+space-y-8
+">
+
+{/* HEADER */}
+
+<div>
+
+<h1 className="
+text-4xl
+font-black
+text-gray-900
+">
+Facilities
+</h1>
+
+<p className="
+text-gray-500
+mt-1
+">
+Manage society facilities
+</p>
+
+</div>
 
 {/* KPI */}
 <div className="grid lg:grid-cols-3 gap-6">
@@ -60,7 +88,16 @@ return(
 </div>
 
 {/* Toolbar */}
-<div className="bg-white p-4 rounded-xl shadow-sm flex gap-4">
+<div className="
+bg-white
+rounded-[32px]
+shadow-sm
+p-5
+flex
+gap-4
+flex-wrap
+items-center
+">
 
 <input
 placeholder="Search..."
@@ -168,11 +205,70 @@ Close
 
 /* Small Components */
 
-const Stat=({label,value})=>(
-<div className="bg-white p-5 rounded-xl shadow-sm">
-<p className="text-xs text-gray-400">{label}</p>
-<p className="text-2xl font-bold">{value}</p>
+const Stat=({
+label,
+value
+})=>(
+
+<div className="
+bg-white
+rounded-[32px]
+shadow-sm
+hover:shadow-lg
+transition
+p-6
+">
+
+<div className="
+flex
+justify-between
+items-center
+">
+
+<div>
+
+<p className="
+text-sm
+text-gray-500
+">
+
+{label}
+
+</p>
+
+<p className="
+text-4xl
+font-black
+mt-2
+">
+
+{value}
+
+</p>
+
 </div>
+
+<div className="
+w-16
+h-16
+rounded-[24px]
+bg-gradient-to-br
+from-blue-50
+to-indigo-100
+flex
+items-center
+justify-center
+text-3xl
+">
+
+🏢
+
+</div>
+
+</div>
+
+</div>
+
 );
 
 const Status=({status})=>(

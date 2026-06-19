@@ -1,10 +1,5 @@
 import React, { useEffect, useState } from "react";
-import {
-  getNotices,
-  createNotice,
-  updateNotice,
-  deleteNotice,
-} from "../../../api/notice";
+import { getNotices, createNotice, updateNotice, deleteNotice } from "../../../api/notice";
 
 export default function Notices() {
   const [notices, setNotices] = useState([]);
@@ -18,44 +13,30 @@ export default function Notices() {
         const data = await getNotices();
         if (mounted) setNotices(Array.isArray(data) ? data : []);
       } catch (err) {
-        alert(
-          err?.response?.data?.message ||
-            err?.message ||
-            "Failed to load notices.",
-        );
+        console.error("load notices:", err);
       } finally {
         setLoading(false);
       }
     }
     load();
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
 
   const handleCreate = async (payload) => {
     try {
       const created = await createNotice(payload);
-      setNotices((prev) => [created, ...prev]);
+      setNotices(prev => [created, ...prev]);
     } catch (err) {
-      alert(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Failed to create notice.",
-      );
+      console.error("create notice:", err);
     }
   };
 
   const handleUpdate = async (id, data) => {
     try {
       const updated = await updateNotice(id, data);
-      setNotices((prev) => prev.map((n) => (n.id === id ? updated : n)));
+      setNotices(prev => prev.map(n => n.id === id ? updated : n));
     } catch (err) {
-      alert(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Failed to update notice.",
-      );
+      console.error("update notice:", err);
     }
   };
 
@@ -63,13 +44,9 @@ export default function Notices() {
     if (!confirm("Delete notice?")) return;
     try {
       await deleteNotice(id);
-      setNotices((prev) => prev.filter((n) => n.id !== id));
+      setNotices(prev => prev.filter(n => n.id !== id));
     } catch (err) {
-      alert(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Failed to delete notice.",
-      );
+      console.error("delete notice:", err);
     }
   };
 
@@ -87,31 +64,16 @@ export default function Notices() {
           </thead>
           <tbody>
             {loading ? (
-              <tr>
-                <td colSpan="3" className="py-6 text-center">
-                  Loading...
-                </td>
-              </tr>
+              <tr><td colSpan="3" className="py-6 text-center">Loading...</td></tr>
             ) : notices.length === 0 ? (
-              <tr>
-                <td colSpan="3" className="py-6 text-center">
-                  No notices yet.
-                </td>
-              </tr>
+              <tr><td colSpan="3" className="py-6 text-center">No notices yet.</td></tr>
             ) : (
-              notices.map((n) => (
+              notices.map(n => (
                 <tr key={n.id} className="border-t">
-                  <td className="py-3 text-slate-600">
-                    {n.date?.split("T")[0] ?? n.date}
-                  </td>
+                  <td className="py-3 text-slate-600">{n.date?.split("T")[0] ?? n.date}</td>
                   <td className="py-3 text-slate-700">{n.text || n.title}</td>
                   <td className="py-3">
-                    <button
-                      onClick={() => handleDelete(n.id)}
-                      className="px-3 py-1 rounded-md bg-rose-600 text-white text-sm hover:bg-rose-700"
-                    >
-                      Delete
-                    </button>
+                    <button onClick={() => handleDelete(n.id)} className="px-3 py-1 rounded-md bg-rose-600 text-white text-sm hover:bg-rose-700">Delete</button>
                   </td>
                 </tr>
               ))

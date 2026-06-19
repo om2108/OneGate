@@ -1,28 +1,43 @@
 import SockJS from "sockjs-client";
+
 import { Client } from "@stomp/stompjs";
 
 let client = null;
 
-export const connectSocket = (userId, onRefresh) => {
+export const connectSocket = (
+  userId,
+
+  onRefresh,
+) => {
   if (!userId) return;
+
+  if (client?.connected) return;
 
   client = new Client({
     webSocketFactory: () => new SockJS("http://localhost:8080/ws"),
+
     reconnectDelay: 5000,
 
+    debug: () => {},
+
     onConnect: () => {
+      client.subscribe(
+        `/topic/notifications/${userId}`,
 
-      client.subscribe(`/topic/notifications/${userId}`, () => {
+        () => {
+          window.dispatchEvent(new Event("refreshNotifications"));
 
-        if (onRefresh) onRefresh();
-      });
+          onRefresh?.();
+        },
+      );
     },
-
   });
 
   client.activate();
 };
 
 export const disconnectSocket = () => {
-  if (client) client.deactivate();
+  client?.deactivate();
+
+  client = null;
 };

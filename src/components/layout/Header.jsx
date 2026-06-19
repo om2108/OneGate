@@ -19,8 +19,8 @@ import {
   markAllNotificationsRead,
 } from "../../api/notification";
 
-const logo =
-  "https://res.cloudinary.com/dopjyimaq/image/upload/f_auto,q_auto/v1771076067/encuusttipzand6nseyr.svg";import { motion } from "framer-motion";
+import logo from "../../assets/logo.svg";
+import { motion } from "framer-motion";
 
 export default function Header({ setSidebarOpen, onOpenProfileModal }) {
   const { user, logout } = useContext(AuthContext);
@@ -58,7 +58,7 @@ export default function Header({ setSidebarOpen, onOpenProfileModal }) {
         const data = await getProfile();
         if (mounted) setProfile(data);
       } catch (e) {
-        alert("Profile load failed");
+        console.error("Profile load failed:", e);
       } finally {
         if (mounted) setLoadingProfile(false);
       }
@@ -78,7 +78,7 @@ export default function Header({ setSidebarOpen, onOpenProfileModal }) {
       setUnreadCount(count || 0);
       setNotifications(Array.isArray(list) ? list : []);
     } catch (e) {
-      alert("Notification load failed");
+      console.error("Notification load failed", e);
     }
   };
 

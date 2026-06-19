@@ -44,6 +44,7 @@ function Rightbar() {
         getAllProperties(),
       ]);
 
+
       // Case-insensitive ACCEPTED filter
       const accepted = Array.isArray(apptRes)
         ? apptRes.filter((a) => a.status?.toUpperCase() === "ACCEPTED")
@@ -52,20 +53,14 @@ function Rightbar() {
       setAppointments(accepted);
       setProperties(Array.isArray(propRes) ? propRes : []);
     } catch (err) {
-      alert(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Failed to fetch appointments.",
-      );
+      console.error("Failed to fetch appointments:", err);
     } finally {
       setLoading(false);
     }
   };
 
   const getPropertyName = (propertyId) => {
-    const p = properties.find(
-      (x) => x.id === propertyId || x._id === propertyId,
-    );
+    const p = properties.find((x) => x.id === propertyId || x._id === propertyId);
     return p?.name || "Unknown Property";
   };
 
@@ -74,9 +69,12 @@ function Rightbar() {
 
     try {
       await deleteAppointment(id);
-      setAppointments((prev) => prev.filter((a) => (a.id || a._id) !== id));
+      setAppointments((prev) =>
+        prev.filter((a) => (a.id || a._id) !== id)
+      );
     } catch (err) {
-      alert(err?.response?.data?.message || err?.message || "Delete failed.");
+      console.error("Delete failed:", err);
+      alert("Delete failed");
     }
   };
 
@@ -88,17 +86,19 @@ function Rightbar() {
 
       setAppointments((prev) =>
         prev.map((a) =>
-          (a.id || a._id) === (updated.id || updated._id) ? updated : a,
-        ),
+          (a.id || a._id) === (updated.id || updated._id) ? updated : a
+        )
       );
     } catch (err) {
-      alert(err?.response?.data?.message || err?.message || "Scoring failed.");
+      console.error("Scoring failed:", err);
+      alert("Scoring failed");
     } finally {
       setScoring((s) => ({ ...s, [id]: false }));
     }
   };
 
-  const formatDate = (iso) => (iso ? new Date(iso).toLocaleDateString() : "—");
+  const formatDate = (iso) =>
+    iso ? new Date(iso).toLocaleDateString() : "—";
 
   const formatTime = (iso) =>
     iso
